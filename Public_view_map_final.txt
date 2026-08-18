@@ -1,0 +1,4692 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Baga Burger Branch Map</title>
+
+    <!-- =====================================================
+         LEAFLET MAP
+    ====================================================== -->
+
+    <link rel="stylesheet"
+          href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+
+    <!-- =====================================================
+         LEAFLET DRAW
+    ====================================================== -->
+
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css">
+
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        /* =====================================================
+           HEADER
+        ====================================================== */
+
+        .header {
+            background: #ffffff;
+            padding: 10px 15px;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            min-height: 62px;
+            position: relative;
+            z-index: 3000;
+        }
+
+        .header-title {
+            font-size: 20px;
+            font-weight: bold;
+            margin-right: 15px;
+        }
+
+        /* =====================================================
+           SEARCH BOX
+        ====================================================== */
+
+        #searchBox {
+            padding: 8px;
+            width: 230px;
+            border: 1px solid #aaa;
+            border-radius: 5px;
+        }
+
+        #searchButton,
+        #commentButton,
+        #addBranchButton {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            background: #f2f2f2;
+        }
+
+        #searchButton:hover,
+        #commentButton:hover,
+        #addBranchButton:hover {
+            background: #e5e5e5;
+        }
+
+        #commentButton.active {
+            font-weight: bold;
+            background: #ffe600;
+        }
+
+        /* =====================================================
+           MAP
+        ====================================================== */
+
+        #map {
+            height: calc(100vh - 62px);
+            width: 100%;
+            position: relative;
+        }
+
+        /* =====================================================
+           MAP COMMENT
+        ====================================================== */
+
+        .map-comment {
+            background: yellow;
+            border: 2px solid #333;
+            border-radius: 7px;
+            padding: 8px 12px;
+            font-size: 13px;
+            font-weight: bold;
+            color: #ff0000;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.30);
+            white-space: nowrap;
+        }
+
+        /* =====================================================
+           COMMENT FORM
+        ====================================================== */
+
+        .comment-input {
+            width: 230px;
+            padding: 7px;
+            margin-top: 4px;
+            border: 1px solid #aaa;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        .comment-button {
+            margin-top: 7px;
+            padding: 6px 10px;
+            cursor: pointer;
+            border: 1px solid #888;
+            border-radius: 4px;
+            background: #f5f5f5;
+        }
+
+        .comment-button:hover {
+            background: #e5e5e5;
+        }
+
+        /* =====================================================
+           CREATOR NOTES PANEL
+        ====================================================== */
+
+        #creatorNotesPanel {
+            position: fixed;
+            left: 0;
+            top: 62px;
+            bottom: 0;
+            width: 360px;
+            background: #fcfbb5;
+            z-index: 1800;
+            box-shadow: 3px 0 14px rgba(0,0,0,0.18);
+            transform: translateX(0);
+            transition: transform 0.25s ease;
+            border-right: 1px solid #e5e5e5;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #creatorNotesPanel.collapsed {
+            transform: translateX(calc(-100% + 44px));
+        }
+
+        #creatorNotesTab {
+            position: absolute;
+            right: -44px;
+            top: 18px;
+            width: 44px;
+            height: 118px;
+            border: 1px solid #d5c8b4;
+            border-left: none;
+            border-radius: 0 9px 9px 0;
+            background: #fcfbb5;
+            color: #4a4034;
+            cursor: pointer;
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            font-weight: bold;
+            font-size: 12px;
+            box-shadow: 3px 2px 8px rgba(0,0,0,0.12);
+        }
+
+        #creatorNotesHeader {
+            padding: 14px 16px 10px;
+            border-bottom: 1px solid #d5c8b4;
+            flex-shrink: 0;
+        }
+
+        #creatorNotesHeader h3 {
+            margin: 0 0 4px;
+            font-size: 17px;
+        }
+
+        #creatorNotesHeader p {
+            margin: 0;
+            font-size: 12px;
+            color: #756b5f;
+        }
+
+        #creatorAreaSections {
+            padding: 10px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .creator-area-section {
+            background: #fffdf8;
+            border: 1px solid #d5c8b4;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.06);
+        }
+
+        .creator-area-header {
+            width: 100%;
+            border: none;
+            background: #eee6d8;
+            color: #3f372d;
+            padding: 11px 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: bold;
+            font-size: 14px;
+            text-align: left;
+        }
+
+        .creator-area-header:hover {
+            background: #e7ddcc;
+        }
+
+        .creator-area-arrow {
+            font-size: 13px;
+            transition: transform 0.2s ease;
+        }
+
+        .creator-area-section.collapsed .creator-area-arrow {
+            transform: rotate(-90deg);
+        }
+
+        .creator-area-content {
+            padding: 10px;
+        }
+
+        .creator-area-section.collapsed .creator-area-content {
+            display: none;
+        }
+
+        .creator-name-input,
+        .creator-note-input {
+            width: 100%;
+            border: 1px solid #c7baa7;
+            border-radius: 6px;
+            background: #fff;
+            padding: 8px 9px;
+            font-family: inherit;
+            font-size: 12px;
+            margin-bottom: 7px;
+            outline: none;
+        }
+
+        .creator-name-input:focus,
+        .creator-note-input:focus {
+            border-color: #8d7b63;
+        }
+
+        .creator-note-input {
+            min-height: 58px;
+            resize: vertical;
+        }
+
+        .add-area-note-button {
+            width: 100%;
+            padding: 7px 9px;
+            border: 1px solid #8d7b63;
+            border-radius: 6px;
+            background: #4a4034;
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 12px;
+        }
+
+        .add-area-note-button:hover {
+            opacity: 0.9;
+        }
+
+        .creator-area-list {
+            margin-top: 9px;
+        }
+
+        .creator-note-card {
+            position: relative;
+            background: #fff8b8;
+            border: 1px solid #ded28a;
+            border-radius: 5px;
+            padding: 10px 30px 9px 11px;
+            margin-bottom: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+        }
+
+        .creator-note-card::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: #c8ad45;
+        }
+
+        .creator-note-name {
+            font-size: 13px;
+            font-weight: bold;
+            color: #40382d;
+            margin-bottom: 4px;
+        }
+
+        .creator-note-text {
+            font-size: 12px;
+            line-height: 1.4;
+            color: #5f5548;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .delete-creator-note {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            width: 22px;
+            height: 22px;
+            border: none;
+            border-radius: 50%;
+            background: transparent;
+            color: #8a7762;
+            cursor: pointer;
+            font-size: 17px;
+            line-height: 20px;
+        }
+
+        .delete-creator-note:hover {
+            background: #eadb9a;
+            color: #333;
+        }
+
+        .edit-creator-note {
+            position: absolute;
+            right: 34px;
+            top: 7px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .creator-notes-empty {
+            padding: 8px 3px 2px;
+            color: #8a7f70;
+            font-size: 11px;
+            text-align: center;
+            line-height: 1.4;
+        }
+
+        /* =====================================================
+           SEARCH RESULTS
+        ====================================================== */
+
+        #searchResults {
+            position: fixed;
+            top: 55px;
+            left: 250px;
+            background: white;
+            z-index: 5000;
+            max-height: 300px;
+            overflow-y: auto;
+            width: 300px;
+            border: 1px solid #ccc;
+            display: none;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+        }
+
+        .search-result {
+            padding: 8px;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+        }
+
+        .search-result:hover {
+            background: #f0f0f0;
+        }
+
+        /* =====================================================
+           BRANCH INFORMATION PANEL
+        ====================================================== */
+
+        .branch-info-panel {
+            position: absolute;
+            right: 20px;
+            bottom: 20px;
+            width: 360px;
+            max-width: calc(100% - 40px);
+            max-height: calc(100% - 40px);
+            overflow-y: auto;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.88);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            border: 1px solid rgba(255, 255, 255, 0.55);
+            border-radius: 20px;
+            box-shadow: 0 10px 35px rgba(0, 0, 0, 0.20);
+            z-index: 1000;
+            display: none;
+            font-family: Arial, sans-serif;
+        }
+
+        .branch-info-panel.active {
+            display: block;
+        }
+
+        .branch-info-close {
+            position: absolute;
+            top: 10px;
+            right: 12px;
+            width: 30px;
+            height: 30px;
+            border: none;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.08);
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        .branch-info-title {
+            font-size: 21px;
+            font-weight: bold;
+            padding-right: 30px;
+            margin-bottom: 8px;
+        }
+
+        .branch-info-quote {
+            font-size: 14px;
+            font-style: italic;
+            opacity: 0.75;
+            margin-bottom: 18px;
+        }
+
+        .branch-info-item {
+            margin-bottom: 12px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .branch-info-label {
+            font-weight: bold;
+            display: block;
+            margin-bottom: 2px;
+        }
+
+        .branch-info-link {
+            color: #1264a3;
+            text-decoration: none;
+            word-break: break-all;
+        }
+
+        .branch-info-link:hover {
+            text-decoration: underline;
+        }
+
+        .branch-info-notes {
+            width: 100%;
+            min-height: 80px;
+            resize: vertical;
+            padding: 10px;
+            border-radius: 12px;
+            border: 1px solid rgba(0, 0, 0, 0.15);
+            background: rgba(255, 255, 255, 0.55);
+            font-family: inherit;
+            outline: none;
+        }
+
+        .branch-info-input {
+            width: 100%;
+            padding: 9px;
+            border-radius: 8px;
+            border: 1px solid #bbb;
+            margin-bottom: 7px;
+            font-family: inherit;
+        }
+
+        .branch-info-save {
+            margin-top: 8px;
+            padding: 8px 14px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            background: #222;
+            color: #fff;
+        }
+
+        .branch-info-edit {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            background: #f1f1f1;
+            margin-right: 5px;
+        }
+
+        .branch-info-edit:hover {
+            background: #ddd;
+        }
+
+        @media (max-width: 700px) {
+
+            .header-title {
+                width: 100%;
+            }
+
+            #searchBox {
+                width: 180px;
+            }
+
+            #creatorNotesPanel {
+                width: 300px;
+            }
+
+            .branch-info-panel {
+                width: 300px;
+                right: 10px;
+                bottom: 10px;
+            }
+
+            #searchResults {
+                left: 10px;
+                top: 105px;
+                width: calc(100% - 20px);
+            }
+
+        }
+
+
+        #authArea {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        #authStatus {
+            font-size: 12px;
+            color: #555;
+            max-width: 220px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .auth-button {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            background: #f2f2f2;
+        }
+
+        .auth-button:hover {
+            background: #e5e5e5;
+        }
+
+        #loginModal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,.45);
+            z-index: 10000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #loginModal.active { display: flex; }
+
+        .login-card {
+            width: min(360px, calc(100vw - 30px));
+            background: #fff;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 10px 35px rgba(0,0,0,.25);
+        }
+
+        .login-card h3 { margin-top: 0; }
+
+        .login-card input {
+            width: 100%;
+            padding: 10px;
+            margin: 6px 0;
+            border: 1px solid #aaa;
+            border-radius: 5px;
+        }
+
+        .login-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+<!-- =========================================================
+     HEADER
+========================================================== -->
+
+<div class="header">
+
+    <div class="header-title">
+        Baga Burger Branch Map
+    </div>
+
+    <input
+        type="text"
+        id="searchBox"
+        placeholder="Search branch..."
+    >
+
+    <button
+        id="searchButton"
+        onclick="searchBranch()">
+        🔍 Search
+    </button>
+
+    <button
+        id="commentButton"
+        onclick="activateCommentMode()">
+        📝 Add Comment
+    </button>
+
+    <button
+        id="addBranchButton"
+        onclick="addNewBranch()">
+        ➕ Add Branch
+    </button>
+
+    <div id="authArea">
+        <span id="authStatus">Public view</span>
+        <button class="auth-button" id="loginButton" onclick="openLogin()">🔐 Login to Edit</button>
+        <button class="auth-button" id="logoutButton" onclick="logoutUser()" style="display:none;">Logout</button>
+    </div>
+
+</div>
+
+
+<div id="searchResults"></div>
+
+<div id="loginModal">
+    <div class="login-card">
+        <h3>🔐 Baga Burger Editor Login</h3>
+        <input id="loginEmail" type="email" placeholder="Email">
+        <input id="loginPassword" type="password" placeholder="Password">
+        <div class="login-actions">
+            <button class="auth-button" onclick="loginUser()">Login</button>
+            <button class="auth-button" onclick="closeLogin()">Cancel</button>
+        </div>
+        <div id="loginMessage" style="font-size:12px;margin-top:8px;color:#b00020;"></div>
+    </div>
+</div>
+
+
+
+
+<!-- =========================================================
+     CREATOR NOTES
+========================================================== -->
+
+<div id="creatorNotesPanel">
+
+    <button
+        id="creatorNotesTab"
+        onclick="toggleCreatorNotes()"
+        title="Collapse creator notes">
+        🎥 Creator Notes
+    </button>
+
+    <div id="creatorNotesHeader">
+
+        <h3>🎥 Vlogger / Creator Notes</h3>
+
+        <p>
+            Organize content creators by area.
+        </p>
+
+    </div>
+
+    <div id="creatorAreaSections">
+
+
+        <!-- NORTH -->
+
+        <section
+            class="creator-area-section"
+            id="creatorAreaNorth">
+
+            <button
+                class="creator-area-header"
+                onclick="toggleCreatorArea('North')">
+
+                <span>1. North Area</span>
+
+                <span class="creator-area-arrow">▼</span>
+
+            </button>
+
+            <div class="creator-area-content">
+
+                <input
+                    class="creator-name-input"
+                    id="creatorNameNorth"
+                    type="text"
+                    placeholder="Vlogger / Content Creator name..."
+                >
+
+                <textarea
+                    class="creator-note-input"
+                    id="creatorNoteNorth"
+                    placeholder="Add a note, contact, location, campaign idea, etc."
+                ></textarea>
+
+                <button
+                    class="add-area-note-button"
+                    onclick="addCreatorNote('North')">
+
+                    ＋ Add North Area Note
+
+                </button>
+
+                <div
+                    class="creator-area-list"
+                    id="creatorListNorth">
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- NCR -->
+
+        <section
+            class="creator-area-section"
+            id="creatorAreaNCR">
+
+            <button
+                class="creator-area-header"
+                onclick="toggleCreatorArea('NCR')">
+
+                <span>2. NCR Area</span>
+
+                <span class="creator-area-arrow">▼</span>
+
+            </button>
+
+            <div class="creator-area-content">
+
+                <input
+                    class="creator-name-input"
+                    id="creatorNameNCR"
+                    type="text"
+                    placeholder="Vlogger / Content Creator name..."
+                >
+
+                <textarea
+                    class="creator-note-input"
+                    id="creatorNoteNCR"
+                    placeholder="Add a note, contact, location, campaign idea, etc."
+                ></textarea>
+
+                <button
+                    class="add-area-note-button"
+                    onclick="addCreatorNote('NCR')">
+
+                    ＋ Add NCR Area Note
+
+                </button>
+
+                <div
+                    class="creator-area-list"
+                    id="creatorListNCR">
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- SOUTH -->
+
+        <section
+            class="creator-area-section"
+            id="creatorAreaSouth">
+
+            <button
+                class="creator-area-header"
+                onclick="toggleCreatorArea('South')">
+
+                <span>3. South Area</span>
+
+                <span class="creator-area-arrow">▼</span>
+
+            </button>
+
+            <div class="creator-area-content">
+
+                <input
+                    class="creator-name-input"
+                    id="creatorNameSouth"
+                    type="text"
+                    placeholder="Vlogger / Content Creator name..."
+                >
+
+                <textarea
+                    class="creator-note-input"
+                    id="creatorNoteSouth"
+                    placeholder="Add a note, contact, location, campaign idea, etc."
+                ></textarea>
+
+                <button
+                    class="add-area-note-button"
+                    onclick="addCreatorNote('South')">
+
+                    ＋ Add South Area Note
+
+                </button>
+
+                <div
+                    class="creator-area-list"
+                    id="creatorListSouth">
+                </div>
+
+            </div>
+
+        </section>
+
+    </div>
+
+</div>
+
+
+<!-- =========================================================
+     MAP
+========================================================== -->
+
+<div id="map">
+
+    <!-- =====================================================
+         BRANCH INFORMATION PANEL
+    ====================================================== -->
+
+    <div
+        id="branchInfoPanel"
+        class="branch-info-panel">
+
+        <button
+            class="branch-info-close"
+            onclick="closeBranchInfo()">
+            ×
+        </button>
+
+        <div id="branchInfoContent">
+
+            <div class="branch-info-placeholder">
+                📍 Click a branch to view information
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- =========================================================
+     LEAFLET
+========================================================== -->
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+
+<!-- =========================================================
+     LEAFLET DRAW
+========================================================== -->
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+
+<!-- =========================================================
+     SUPABASE CLIENT
+========================================================== -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script>
+
+/* ============================================================
+   1. INITIAL MAP
+============================================================ */
+
+var map = L.map('map').setView(
+    [14.85, 120.90],
+    10
+);
+
+
+/* ============================================================
+   2. MAP BACKGROUND
+============================================================ */
+
+L.tileLayer(
+    'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    {
+        maxZoom: 19,
+        attribution: '&copy; OpenStreetMap contributors'
+    }
+).addTo(map);
+
+
+/* ============================================================
+   3. BRANCH DATA
+============================================================ */
+
+var branches = [];
+
+
+/* ============================================================
+   4. STORAGE
+============================================================ */
+
+var branchEditsStorageKey = 'bagaBurgerBranchEdits';
+var branchEdits = {};
+
+/* ============================================================
+   SUPABASE CONFIGURATION
+============================================================ */
+
+var SUPABASE_URL = 'https://bajteupkizbjrtktyftj.supabase.co';
+var SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_rCDJuXABi7J5APDiatGwPw_2zzG3U_g';
+var supabaseClient = window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_PUBLISHABLE_KEY
+);
+
+var currentUser = null;
+
+function isEditor() {
+    return !!currentUser;
+}
+
+function requireEditor() {
+    if (!isEditor()) {
+        alert('View only. Please login with an authorized Supabase account to edit.');
+        openLogin();
+        return false;
+    }
+    return true;
+}
+
+function updateAuthUI() {
+    var status = document.getElementById('authStatus');
+    var loginButton = document.getElementById('loginButton');
+    var logoutButton = document.getElementById('logoutButton');
+    var editButtons = [
+        document.getElementById('addBranchButton'),
+        document.getElementById('commentButton')
+    ];
+
+    if (currentUser) {
+        status.textContent = 'Editor: ' + (currentUser.email || 'Authorized user');
+        loginButton.style.display = 'none';
+        logoutButton.style.display = 'inline-block';
+        editButtons.forEach(function(btn) { if (btn) btn.style.display = 'inline-block'; });
+    } else {
+        status.textContent = 'Public view';
+        loginButton.style.display = 'inline-block';
+        logoutButton.style.display = 'none';
+        editButtons.forEach(function(btn) { if (btn) btn.style.display = 'inline-block'; });
+    }
+}
+
+function openLogin() {
+    document.getElementById('loginMessage').textContent = '';
+    document.getElementById('loginModal').classList.add('active');
+    setTimeout(function(){ document.getElementById('loginEmail').focus(); }, 50);
+}
+
+function closeLogin() {
+    document.getElementById('loginModal').classList.remove('active');
+}
+
+async function loginUser() {
+    var email = document.getElementById('loginEmail').value.trim();
+    var password = document.getElementById('loginPassword').value;
+    var msg = document.getElementById('loginMessage');
+
+    if (!email || !password) {
+        msg.textContent = 'Enter your email and password.';
+        return;
+    }
+
+    msg.textContent = 'Logging in...';
+
+    var result = await supabaseClient.auth.signInWithPassword({
+        email: email,
+        password: password
+    });
+
+    if (result.error) {
+        msg.textContent = result.error.message;
+        return;
+    }
+
+    currentUser = result.data.user;
+    updateAuthUI();
+    closeLogin();
+    alert('Login successful. You can now edit the map.');
+}
+
+async function logoutUser() {
+    await supabaseClient.auth.signOut();
+    currentUser = null;
+    updateAuthUI();
+    alert('Logged out. The map is now view-only.');
+}
+
+async function initAuth() {
+    var sessionResult = await supabaseClient.auth.getSession();
+    currentUser = sessionResult.data.session ? sessionResult.data.session.user : null;
+    updateAuthUI();
+
+    supabaseClient.auth.onAuthStateChange(function(event, session) {
+        currentUser = session ? session.user : null;
+        updateAuthUI();
+    });
+}
+
+function loadBranchEdits() {
+    try {
+        var saved = localStorage.getItem(branchEditsStorageKey);
+        if (saved) branchEdits = JSON.parse(saved) || {};
+    } catch (error) {
+        branchEdits = {};
+    }
+}
+
+function saveBranchEditsLocal() {
+    try {
+        localStorage.setItem(branchEditsStorageKey, JSON.stringify(branchEdits));
+    } catch (error) {}
+}
+
+async function saveBranchToSupabase(branch) {
+    if (!requireEditor()) return false;
+
+    var payload = {
+        original_name: branch.originalName,
+        name: branch.name,
+        area: branch.area || '',
+        address: branch.address || '',
+        facebook: branch.facebook || '',
+        website: branch.website || '',
+        quote: branch.quote || '',
+        notes: branch.notes || '',
+        lat: Number(branch.lat),
+        lng: Number(branch.lng)
+    };
+
+    var existing = await supabaseClient
+        .from('branches')
+        .select('id')
+        .eq('original_name', branch.originalName)
+        .maybeSingle();
+
+    if (existing.error && existing.error.code !== 'PGRST116') {
+        console.error(existing.error);
+        alert('Supabase lookup failed: ' + existing.error.message);
+        return false;
+    }
+
+    var result;
+
+    if (existing.data && existing.data.id != null) {
+        result = await supabaseClient
+            .from('branches')
+            .update(payload)
+            .eq('id', existing.data.id);
+    } else {
+        result = await supabaseClient
+            .from('branches')
+            .insert(payload);
+    }
+
+    if (result.error) {
+        console.error(result.error);
+        alert('Could not save to Supabase: ' + result.error.message);
+        return false;
+    }
+
+    branchEdits[branch.originalName] = payload;
+    saveBranchEditsLocal();
+    return true;
+}
+
+async function loadBranchesFromSupabase() {
+    var result = await supabaseClient
+        .from('branches')
+        .select('*')
+        .order('id', { ascending: true });
+
+    if (result.error) {
+        console.error('Could not load Supabase branches:', result.error);
+        return;
+    }
+
+    (result.data || []).forEach(function(row) {
+        var branch = branches.find(function(b) {
+            return b.originalName === row.original_name;
+        });
+
+        if (branch) {
+            branch.name = row.name || branch.name;
+            branch.area = row.area || branch.area;
+            branch.address = row.address || '';
+            branch.facebook = row.facebook || '';
+            branch.website = row.website || '';
+            branch.quote = row.quote || '';
+            branch.notes = row.notes || '';
+            if (row.lat != null) branch.lat = Number(row.lat);
+            if (row.lng != null) branch.lng = Number(row.lng);
+            refreshBranchPopup(branch);
+            if (branch.marker) branch.marker.setLatLng([branch.lat, branch.lng]);
+        } else if (row.lat != null && row.lng != null) {
+            var newBranch = addBranch(
+                row.name || row.original_name,
+                Number(row.lat),
+                Number(row.lng),
+                row.area || '',
+                row.address || '',
+                row.facebook || '',
+                row.website || '',
+                row.quote || '',
+                row.notes || ''
+            );
+            if (newBranch) newBranch.originalName = row.original_name || newBranch.name;
+        }
+    });
+
+    if (typeof searchBranch === 'function') searchBranch();
+}
+
+/* ============================================================
+   5. SECURITY / HTML ESCAPE
+============================================================ */
+
+function escapePopupText(text) {
+
+    return String(
+        text == null ? '' : text
+    )
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+
+}
+
+
+/* ============================================================
+   URL VALIDATION
+============================================================ */
+
+function safeUrl(url) {
+
+    if (!url) {
+        return '';
+    }
+
+    url = String(url).trim();
+
+    if (
+        url.startsWith('https://') ||
+        url.startsWith('http://')
+    ) {
+
+        return url;
+
+    }
+
+    return '';
+
+}
+
+
+/* ============================================================
+   6. BRANCH INFORMATION PANEL
+============================================================ */
+
+function openBranchInfo(branch) {
+
+    var panel =
+        document.getElementById(
+            'branchInfoPanel'
+        );
+
+    var content =
+        document.getElementById(
+            'branchInfoContent'
+        );
+
+    var googleMapsUrl =
+        'https://www.google.com/maps/search/?api=1&query=' +
+        encodeURIComponent(
+            branch.lat + ',' + branch.lng
+        );
+
+    var facebookUrl =
+        safeUrl(branch.facebook);
+
+    var websiteUrl =
+        safeUrl(branch.website);
+
+
+    content.innerHTML =
+
+        '<div class="branch-info-title">' +
+            escapePopupText(branch.name) +
+        '</div>' +
+
+        '<div class="branch-info-quote">' +
+            escapePopupText(
+                branch.quote ||
+                'Welcome to Baga Burger.'
+            ) +
+        '</div>' +
+
+
+        '<div class="branch-info-item">' +
+
+            '<span class="branch-info-label">' +
+                '📍 Address' +
+            '</span>' +
+
+            escapePopupText(
+                branch.address ||
+                branch.area ||
+                'No address added.'
+            ) +
+
+        '</div>' +
+
+
+        '<div class="branch-info-item">' +
+
+            '<span class="branch-info-label">' +
+                '📘 Facebook' +
+            '</span>' +
+
+            (
+                facebookUrl
+
+                ?
+
+                '<a class="branch-info-link" href="' +
+                    escapePopupText(facebookUrl) +
+                    '" target="_blank" rel="noopener noreferrer">' +
+                    'Open Facebook Page' +
+                '</a>'
+
+                :
+
+                'No Facebook page added.'
+            ) +
+
+        '</div>' +
+
+
+        '<div class="branch-info-item">' +
+
+            '<span class="branch-info-label">' +
+                '🌐 Website' +
+            '</span>' +
+
+            (
+                websiteUrl
+
+                ?
+
+                '<a class="branch-info-link" href="' +
+                    escapePopupText(websiteUrl) +
+                    '" target="_blank" rel="noopener noreferrer">' +
+                    'Open Website' +
+                '</a>'
+
+                :
+
+                'No website added.'
+            ) +
+
+        '</div>' +
+
+
+        '<div class="branch-info-item">' +
+
+            '<span class="branch-info-label">' +
+                '📝 Notes' +
+            '</span>' +
+
+            '<textarea ' +
+                'id="branchNotesInput" ' +
+                'class="branch-info-notes" ' +
+                'placeholder="Add notes about this branch...">' +
+
+                escapePopupText(
+                    branch.notes || ''
+                ) +
+
+            '</textarea>' +
+
+            '<button ' +
+                'class="branch-info-save" ' +
+                'onclick="saveBranchNotes(' +
+                    branch.id +
+                ')">' +
+
+                'Save Notes' +
+
+            '</button>' +
+
+        '</div>' +
+
+
+        '<div class="branch-info-item">' +
+
+            '<button ' +
+                'class="branch-info-edit" ' +
+                'onclick="editBranch(' +
+                    branch.id +
+                ')">' +
+
+                '✏️ Edit Branch' +
+
+            '</button>' +
+
+        '</div>' +
+
+
+        '<div class="branch-info-item">' +
+
+            '<a ' +
+                'href="' +
+                    googleMapsUrl +
+                '" ' +
+                'target="_blank" ' +
+                'rel="noopener noreferrer">' +
+
+                '📍 Open in Google Maps' +
+
+            '</a>' +
+
+        '</div>';
+
+
+    panel.classList.add('active');
+
+}
+
+
+/* ============================================================
+   CLOSE BRANCH INFORMATION
+============================================================ */
+
+function closeBranchInfo() {
+
+    var panel =
+        document.getElementById(
+            'branchInfoPanel'
+        );
+
+    panel.classList.remove(
+        'active'
+    );
+
+}
+
+
+/* ============================================================
+   SAVE BRANCH NOTES
+============================================================ */
+
+async function saveBranchNotes(id) {
+
+    if (!requireEditor()) return;
+
+    var branch =
+        branches.find(function(b) {
+
+            return b.id === id;
+
+        });
+
+
+    if (!branch) {
+        return;
+    }
+
+
+    var input =
+        document.getElementById(
+            'branchNotesInput'
+        );
+
+
+    if (!input) {
+        return;
+    }
+
+
+    branch.notes =
+        input.value.trim();
+
+
+    if (!branchEdits[branch.originalName]) {
+
+        branchEdits[branch.originalName] = {};
+
+    }
+
+
+    branchEdits[
+        branch.originalName
+    ].notes = branch.notes;
+
+
+    saveBranchEditsLocal();
+
+    saveBranchToSupabase(branch).then(function(ok) {
+        if (ok) alert('Branch notes saved to Supabase.');
+    });
+
+
+    openBranchInfo(branch);
+
+}
+
+
+/* ============================================================
+   7. BRANCH POPUP
+============================================================ */
+
+function buildBranchPopup(branch) {
+
+    var url =
+        'https://www.google.com/maps/search/?api=1&query=' +
+        encodeURIComponent(
+            branch.lat + ',' + branch.lng
+        );
+
+
+    return (
+
+        '<b>' +
+            escapePopupText(branch.name) +
+        '</b>' +
+
+        '<br><br>' +
+
+        'Area: ' +
+            escapePopupText(
+                branch.area || ''
+            ) +
+
+        '<br>' +
+
+        'Coordinates: ' +
+
+            Number(branch.lat).toFixed(6) +
+
+            ', ' +
+
+            Number(branch.lng).toFixed(6) +
+
+        '<br><br>' +
+
+        '<button onclick="openBranchInfoById(' +
+            branch.id +
+        ')">' +
+
+            '📋 Branch Information' +
+
+        '</button>' +
+
+        '<br><br>' +
+
+        '<a href="' +
+            url +
+        '" target="_blank" rel="noopener noreferrer">' +
+
+            '📍 Open in Google Maps' +
+
+        '</a>' +
+
+        '<br><br>' +
+
+        '<button onclick="editBranch(' +
+            branch.id +
+        ')">' +
+
+            '✏️ Edit Branch' +
+
+        '</button>'
+
+    );
+
+}
+
+
+/* ============================================================
+   OPEN BRANCH INFO BY ID
+============================================================ */
+
+function openBranchInfoById(id) {
+
+    var branch =
+        branches.find(function(b) {
+
+            return b.id === id;
+
+        });
+
+
+    if (!branch) {
+        return;
+    }
+
+
+    openBranchInfo(branch);
+
+}
+
+
+/* ============================================================
+   REFRESH BRANCH MARKER
+============================================================ */
+
+function refreshBranchPopup(branch) {
+
+    if (!branch.marker) {
+        return;
+    }
+
+
+    branch.marker.setLatLng([
+        branch.lat,
+        branch.lng
+    ]);
+
+
+    branch.marker.unbindPopup();
+
+
+    branch.marker.bindPopup(
+        buildBranchPopup(branch)
+    );
+
+}
+
+
+/* ============================================================
+   8. ADD BRANCH
+============================================================ */
+
+function addBranch(
+    name,
+    lat,
+    lng,
+    area,
+    address,
+    facebook,
+    website,
+    quote,
+    notes
+) {
+
+    var branch = {
+
+        id: branches.length,
+
+        originalName: name,
+
+        name: name,
+
+        lat: Number(lat),
+
+        lng: Number(lng),
+
+        area: area || '',
+
+        address: address || '',
+
+        facebook: facebook || '',
+
+        website: website || '',
+
+        quote: quote || '',
+
+        notes: notes || '',
+
+        marker: null
+
+    };
+
+
+    var saved =
+        branchEdits[
+            branch.originalName
+        ];
+
+
+    if (saved) {
+
+        if (saved.name) {
+            branch.name = saved.name;
+        }
+
+        if (saved.area) {
+            branch.area = saved.area;
+        }
+
+        if (
+            saved.lat !== undefined &&
+            Number.isFinite(
+                Number(saved.lat)
+            )
+        ) {
+
+            branch.lat =
+                Number(saved.lat);
+
+        }
+
+        if (
+            saved.lng !== undefined &&
+            Number.isFinite(
+                Number(saved.lng)
+            )
+        ) {
+
+            branch.lng =
+                Number(saved.lng);
+
+        }
+
+        if (
+            saved.address !== undefined
+        ) {
+
+            branch.address =
+                saved.address;
+
+        }
+
+        if (
+            saved.facebook !== undefined
+        ) {
+
+            branch.facebook =
+                saved.facebook;
+
+        }
+
+        if (
+            saved.website !== undefined
+        ) {
+
+            branch.website =
+                saved.website;
+
+        }
+
+        if (
+            saved.quote !== undefined
+        ) {
+
+            branch.quote =
+                saved.quote;
+
+        }
+
+        if (
+            saved.notes !== undefined
+        ) {
+
+            branch.notes =
+                saved.notes;
+
+        }
+
+    }
+
+
+    if (
+        !Number.isFinite(branch.lat) ||
+        !Number.isFinite(branch.lng)
+    ) {
+
+        console.warn(
+            'Invalid coordinates for:',
+            branch.name
+        );
+
+        return null;
+
+    }
+
+
+    branch.marker =
+        L.marker([
+            branch.lat,
+            branch.lng
+        ]).addTo(map);
+
+
+    branch.marker.bindPopup(
+        buildBranchPopup(branch)
+    );
+
+
+    branch.marker.on(
+        'click',
+        function() {
+
+            openBranchInfo(branch);
+
+        }
+    );
+
+
+    branches.push(branch);
+
+
+    return branch;
+
+}
+
+
+/* ============================================================
+   9. EDIT BRANCH
+============================================================ */
+
+async function editBranch(id) {
+
+    if (!requireEditor()) return;
+
+    var branch =
+        branches.find(function(b) {
+
+            return b.id === id;
+
+        });
+
+
+    if (!branch) {
+        alert('Branch not found.');
+        return;
+    }
+
+
+    var name =
+        prompt(
+            'Branch name:',
+            branch.name
+        );
+
+
+    if (name === null) {
+        return;
+    }
+
+
+    var area =
+        prompt(
+            'Area:',
+            branch.area
+        );
+
+
+    if (area === null) {
+        return;
+    }
+
+
+    var address =
+        prompt(
+            'Complete Address:',
+            branch.address || ''
+        );
+
+
+    if (address === null) {
+        return;
+    }
+
+
+    var facebook =
+        prompt(
+            'Facebook Page URL:',
+            branch.facebook || ''
+        );
+
+
+    if (facebook === null) {
+        return;
+    }
+
+
+    var website =
+        prompt(
+            'Website URL:',
+            branch.website || ''
+        );
+
+
+    if (website === null) {
+        return;
+    }
+
+
+    var lat =
+        prompt(
+            'Latitude:',
+            branch.lat
+        );
+
+
+    if (lat === null) {
+        return;
+    }
+
+
+    var lng =
+        prompt(
+            'Longitude:',
+            branch.lng
+        );
+
+
+    if (lng === null) {
+        return;
+    }
+
+
+    lat = Number(lat);
+    lng = Number(lng);
+
+
+    if (
+        !name.trim() ||
+        !Number.isFinite(lat) ||
+        !Number.isFinite(lng) ||
+        lat < -90 ||
+        lat > 90 ||
+        lng < -180 ||
+        lng > 180
+    ) {
+
+        alert(
+            'Please enter a valid branch name and coordinates.'
+        );
+
+        return;
+
+    }
+
+
+    if (
+        facebook.trim() &&
+        !safeUrl(facebook)
+    ) {
+
+        alert(
+            'Facebook URL must start with http:// or https://'
+        );
+
+        return;
+
+    }
+
+
+    if (
+        website.trim() &&
+        !safeUrl(website)
+    ) {
+
+        alert(
+            'Website URL must start with http:// or https://'
+        );
+
+        return;
+
+    }
+
+
+    branch.name =
+        name.trim();
+
+
+    branch.area =
+        area.trim() ||
+        branch.area;
+
+
+    branch.address =
+        address.trim();
+
+
+    branch.facebook =
+        facebook.trim();
+
+
+    branch.website =
+        website.trim();
+
+
+    branch.lat =
+        lat;
+
+
+    branch.lng =
+        lng;
+
+
+    if (!branchEdits[branch.originalName]) {
+
+        branchEdits[
+            branch.originalName
+        ] = {};
+
+    }
+
+
+    branchEdits[
+        branch.originalName
+    ] = {
+
+        name: branch.name,
+
+        area: branch.area,
+
+        address: branch.address,
+
+        facebook: branch.facebook,
+
+        website: branch.website,
+
+        quote: branch.quote,
+
+        notes: branch.notes,
+
+        lat: branch.lat,
+
+        lng: branch.lng
+
+    };
+
+
+    saveBranchEditsLocal();
+
+    var saved = await saveBranchToSupabase(branch);
+    if (!saved) return;
+
+    refreshBranchPopup(branch);
+
+
+    openBranchInfo(branch);
+
+}
+
+
+/* ============================================================
+   10. ADD NEW BRANCH
+============================================================ */
+
+async function addNewBranch() {
+
+    if (!requireEditor()) return;
+
+    var name =
+        prompt(
+            'New branch name:'
+        );
+
+
+    if (
+        name === null ||
+        !name.trim()
+    ) {
+
+        return;
+
+    }
+
+
+    var area =
+        prompt(
+            'Area:',
+            'Unassigned'
+        );
+
+
+    if (area === null) {
+        return;
+    }
+
+
+    var address =
+        prompt(
+            'Complete Address:',
+            ''
+        );
+
+
+    if (address === null) {
+        return;
+    }
+
+
+    var facebook =
+        prompt(
+            'Facebook Page URL:',
+            ''
+        );
+
+
+    if (facebook === null) {
+        return;
+    }
+
+
+    var website =
+        prompt(
+            'Website URL:',
+            ''
+        );
+
+
+    if (website === null) {
+        return;
+    }
+
+
+    var latInput =
+        prompt(
+            'Latitude:'
+        );
+
+
+    if (latInput === null) {
+        return;
+    }
+
+
+    var lngInput =
+        prompt(
+            'Longitude:'
+        );
+
+
+    if (lngInput === null) {
+        return;
+    }
+
+
+    var lat =
+        Number(latInput);
+
+
+    var lng =
+        Number(lngInput);
+
+
+    if (
+        !Number.isFinite(lat) ||
+        !Number.isFinite(lng) ||
+        lat < -90 ||
+        lat > 90 ||
+        lng < -180 ||
+        lng > 180
+    ) {
+
+        alert(
+            'Invalid coordinates. Branch was not added.'
+        );
+
+        return;
+
+    }
+
+
+    if (
+        facebook.trim() &&
+        !safeUrl(facebook)
+    ) {
+
+        alert(
+            'Facebook URL must start with http:// or https://'
+        );
+
+        return;
+
+    }
+
+
+    if (
+        website.trim() &&
+        !safeUrl(website)
+    ) {
+
+        alert(
+            'Website URL must start with http:// or https://'
+        );
+
+        return;
+
+    }
+
+
+    var branch =
+        addBranch(
+            name.trim(),
+            lat,
+            lng,
+            area.trim() || 'Unassigned',
+            address.trim(),
+            facebook.trim(),
+            website.trim()
+        );
+
+
+    if (!branch) {
+        return;
+    }
+
+
+    branchEdits[
+        branch.originalName
+    ] = {
+
+        name: branch.name,
+
+        area: branch.area,
+
+        address: branch.address,
+
+        facebook: branch.facebook,
+
+        website: branch.website,
+
+        quote: branch.quote,
+
+        notes: branch.notes,
+
+        lat: branch.lat,
+
+        lng: branch.lng
+
+    };
+
+
+    saveBranchEditsLocal();
+
+    var saved = await saveBranchToSupabase(branch);
+    if (!saved) return;
+
+    map.setView(
+        [
+            branch.lat,
+            branch.lng
+        ],
+        16
+    );
+
+
+    openBranchInfo(branch);
+
+}
+
+
+/* ============================================================
+   LOAD SAVED BRANCH DATA
+============================================================ */
+
+loadBranchEdits();
+
+
+/* ============================================================
+   11. BRANCH LIST
+============================================================ */
+
+
+/* ---------------- BULACAN ---------------- */
+
+addBranch(
+    "Baga Burger - Bataan, Dinalupihan (San Ramon)",
+    14.867834159794121, 
+    120.46394671594186,
+    "Bataan"
+);
+
+addBranch(
+    "Baga Burger - Bataan, Orani",
+    14.802646250654478, 
+    120.53423211355904,
+    "Bataan"
+);
+addBranch(
+    "Baga Burger - Bataan, Samal",
+    14.762686210726132, 
+    120.5406451432508,
+    "Bataan"
+);
+
+addBranch(
+    "Baga Burger - Calvario, Meycauayan",
+    14.73656836288936,
+    120.95872352090895,
+    "Bulacan"
+);
+
+addBranch(
+    "Baga Burger - Iba, Meycauayan",
+    14.758598048345553,
+    120.9830714402819,
+    "Bulacan"
+);
+
+addBranch(
+    "Baga Burger - Lias, Marilao",
+    14.764660267062501,
+    120.97950858328298,
+    "Bulacan"
+);
+
+addBranch(
+    "Baga Burger - Plaza Cecilia Community Mall - Divine Mercy Shrine, Marilao",
+    14.778306930754345,
+    120.97420043996338,
+    "Bulacan"
+);
+
+addBranch(
+    "Baga Burger - (Citrus) Minuyan, San Jose Del Monte",
+    14.853840595333285,
+    121.07337009578158,
+    "Bulacan"
+);
+
+addBranch(
+    "Baga Burger - Francisco Homes, San Jose Del Monte",
+    14.853840595333093,
+    121.07352029949057,
+    "Bulacan"
+);
+
+addBranch(
+    "Baga Burger - Gaya-Gaya, San Jose Del Monte",
+    14.797225998742542,
+    121.04717904181788,
+    "Bulacan"
+);
+
+addBranch(
+    "Baga Burger - Kaypian, San Jose Del Monte",
+    14.820174510497798,
+    121.06582683757098,
+    "Bulacan"
+);
+
+addBranch(
+    "Baga Burger - Muzon (Crossing), San Jose Del Monte",
+    14.789196541635585,
+    121.02830954366921,
+    "Bulacan"
+);
+
+addBranch(
+    "Baga Burger - Muzon (Harmony Hills), San Jose Del Monte",
+    14.820174510497798,
+    121.06552643015455,
+    "Bulacan"
+);
+
+addBranch(
+    "Baga Burger - San Pedro Sapang Palay, San Jose Del Monte",
+    14.849811592212205,
+    121.052088116687,
+    "Bulacan"
+);
+
+addBranch(
+    "Baga Burger - Tungko, San Jose Del Monte",
+    14.790473907136366,
+    121.07301636272267,
+    "Bulacan"
+);
+
+addBranch(
+    "Baga Burger - Poblacion, San Miguel",
+    15.141490135414394,
+    120.97640580766773,
+    "Bulacan"
+);
+
+addBranch(
+    "Baga Burger - Cruz na daan, San Rafael",
+    15.026399973631099,
+    120.93409480599881,
+    "Bulacan"
+);
+
+addBranch(
+    "Baga Burger - Pantubig, San Rafael",
+    14.966699238012927,
+    120.9531623050073,
+    "Bulacan"
+);
+
+addBranch(
+    "Baga Burger - Pulong Buhangin, Sta Maria",
+    14.866226843022398,
+    120.99733190685735,
+    "Bulacan"
+);
+
+addBranch(
+    "Baga Burger - Sta Clara, Sta Maria",
+    14.823084120406692,
+    120.95414072829297,
+    "Bulacan"
+);
+
+addBranch(
+    "Baga Burger - Bayan, Balagtas",
+    14.81912077735577,
+    120.9065721251357,
+    "Bulacan"
+);
+
+addBranch(
+    "Baga Burger - Panginay, Balagtas",
+    14.81862006805603,
+    120.89846389390718,
+    "Bulacan"
+);
+
+addBranch(
+    "Baga Burger - Pulong Gubat, Balagtas",
+    14.848954802389168,
+    120.90576124691877,
+    "Bulacan"
+);
+
+addBranch(
+    "Baga Burger - Tiaong, Baliwag",
+    14.946101336870523,
+    120.89300753984188,
+    "Bulacan"
+);
+
+addBranch(
+    "Baga Burger - Poblacion, Baliwag",
+    14.95737910397675,
+    120.90677263632222,
+    "Bulacan"
+);
+
+addBranch(
+    "Baga Burger - Batia, Bocaue",
+    14.830355885988045,
+    120.94533009333654,
+    "Bulacan"
+);
+
+addBranch(
+    "Baga Burger - Lolomboy, Bocaue",
+    14.781537450856506,
+    120.93608766265353,
+    "Bulacan"
+);
+
+addBranch(
+    "Baga Burger - Poblacion, Bocaue",
+    14.795000226939786,
+    120.92622862586727,
+    "Bulacan"
+);
+
+addBranch(
+    "Baga Burger - Bagumbayan, Bulakan",
+    14.792851031623869,
+    120.87971850128746,
+    "Bulacan"
+);
+
+addBranch(
+    "Baga Burger - San Marcos, Calumpit",
+    14.894366103636163,
+    120.77975241662897,
+    "Bulacan"
+);
+
+addBranch(
+    "Baga Burger - Tuktukan, Guiguinto",
+    14.828325472665474,
+    120.88501429943977,
+    "Bulacan"
+);
+
+addBranch(
+    "Baga Burger - Sta Rita, Guiguinto",
+    14.85375451800188,
+    120.86171862032428,
+    "Bulacan"
+);
+
+addBranch(
+    "Baga Burger - Pinagbakahan - Lugam, Malolos",
+    14.874505679083034,
+    120.82157821293363,
+    "Bulacan"
+);
+
+addBranch(
+    "Baga Burger - Bulihan, Malolos",
+    14.845968917675904,
+    120.82139465059264,
+    "Bulacan"
+);
+
+addBranch(
+    "Baga Burger - San Vicente, Malolos",
+    14.848457868287241,
+    120.81675979370834,
+    "Bulacan"
+);
+
+addBranch(
+    "Baga Burger - San Vicente, Malolos",
+    14.848457868287241,
+    120.81675979370834,
+    "Bulacan"
+);
+
+addBranch(
+    "Baga Burger - Siling Bata, Pandi",
+    14.888351151468747,
+    120.96791587429972,
+    "Bulacan"
+);
+
+addBranch(
+    "Baga Burger - Cupand, Pandi",
+    14.899834937477442,
+    120.94183491293361,
+    "Bulacan"
+);
+
+addBranch(
+    "Baga Burger - Sto Nino, Plaridel",
+    14.871993904127027,
+    120.86207445711054,
+    "Bulacan"
+);
+
+addBranch(
+    "Baga Burger - Tabang (Rocka), Plaridel",
+    14.885303816422578,
+    120.8431991804029,
+    "Bulacan"
+);
+
+addBranch(
+    "Baga Burger - Longos, Pulilan",
+    14.893600704796569,
+    120.86678356690908,
+    "Bulacan"
+);
+
+addBranch(
+    "Baga Burger - Poblacion, Pulilan",
+    14.903124985098763,
+    120.85180848027758,
+    "Bulacan"
+);
+
+addBranch(
+    "Baga Burger - Tibag, Pulilan",
+    14.910062657129941,
+    120.8278033729657,
+    "Bulacan"
+);
+
+addBranch(
+    "Baga Burger - Poblacion, San Ildefonso",
+    15.077506012712576,
+    120.94285577795492,
+    "Bulacan"
+);
+
+
+/* ---------------- NUEVA ECIJA ---------------- */
+
+addBranch(
+    "Baga Burger - Cabiao, Nueva Ecija",
+    15.250400653382883,
+    120.85942263751345,
+    "Nueva Ecija"
+);
+
+addBranch(
+    "Baga Burger - Cabanatuan, Nueva Ecija",
+    15.484901715164392,
+    120.97479142827514,
+    "Nueva Ecija"
+);
+
+addBranch(
+    "Baga Burger - Gapan, Nueva Ecija",
+    15.312625149466694,
+    120.95015972457982,
+    "Nueva Ecija"
+);
+
+addBranch(
+    "Baga Burger - San Isidro, Nueva Ecija",
+    15.30937869583871,
+    120.90775245711055,
+    "Nueva Ecija"
+);
+
+addBranch(
+    "Baga Burger - Talavera, Nueva Ecija",
+    15.583733883754727,
+    120.91948867799502,
+    "Nueva Ecija"
+);
+
+
+/* ---------------- PAMPANGA ---------------- */
+
+addBranch(
+    "Baga Burger - Floridablanca (Apalit), Pampanga",
+    14.982516700171681,
+    120.4811249571105,
+    "Pampanga"
+);
+
+addBranch(
+    "Baga Burger - Floridablanca (Gutad), Pampanga",
+    14.933776612000152,
+    120.50175364546436,
+    "Pampanga"
+);
+
+addBranch(
+    "Baga Burger - Floridablanca (Mabical), Pampanga",
+    14.973976356536625,
+    120.53162308964123,
+    "Pampanga"
+);
+
+addBranch(
+    "Baga Burger - Floridablanca (San Jose), Pampanga",
+    14.986400868649634,
+    120.50841701709344,
+    "Pampanga"
+);
+
+addBranch(
+    "Baga Burger - Guagua (Burgos), Pampanga",
+    14.965427656526174,
+    120.6345492975921,
+    "Pampanga"
+);
+
+addBranch(
+    "Baga Burger - Lubao (Dau), Pampanga",
+    14.97868336809187,
+    120.576901447312,
+    "Pampanga"
+);
+
+addBranch(
+    "Baga Burger - Magalang, Pampanga",
+    15.215702600329019,
+    120.66345140128743,
+    "Pampanga"
+);
+
+addBranch(
+    "Baga Burger - Mexico (San Antonio), Pampanga",
+    15.056003460826524,
+    120.72624668511425,
+    "Pampanga - Exact Location Currently Unavailable"
+);
+
+addBranch(
+    "Baga Burger - Porac (Pio), Pampanga",
+    15.046260028083026,
+    120.52925664120878,
+    "Pampanga"
+);
+
+addBranch(
+    "Baga Burger - Porac (Pulong Santol), Pampanga",
+    15.051787766354725,
+    120.55695381660584,
+    "Pampanga"
+);
+
+addBranch(
+    "Baga Burger - Porac (Manibaug), Pampanga",
+    15.113767263778957,
+    120.56640181323519,
+    "Pampanga"
+);
+
+addBranch(
+    "Baga Burger - San Fernando (Calulut), Pampanga",
+    15.08651719292509,
+    120.65368431052578,
+    "Pampanga"
+);
+
+addBranch(
+    "Baga Burger - San Fernando (Downtown), Pampanga",
+    15.028021504668045,
+    120.69246499984419,
+    "Pampanga - Exact Location Currently Unavailable"
+);
+
+addBranch(
+    "Baga Burger - San Fernando (Maimpis), Pampanga",
+    15.067282939937183,
+    120.6511955742997,
+    "Pampanga"
+);
+
+addBranch(
+    "Baga Burger - San Fernando (Camp Olivas), Pampanga",
+    15.017704688089761,
+    120.70314060089423,
+    "Pampanga - Exact Location Currently Unavailable"
+);
+
+addBranch(
+    "Baga Burger - San Fernando (Sindalan), Pampanga",
+    15.07953196770668,
+    120.64270924176903,
+    "Pampanga"
+);
+
+addBranch(
+    "Baga Burger - San Simon, Pampanga",
+    14.948009903790949,
+    120.75918727575414,
+    "Pampanga"
+);
+
+addBranch(
+    "Baga Burger - Sta Ana, Pampanga",
+    15.094060459709995,
+    120.76700938964123,
+    "Pampanga"
+);
+
+addBranch(
+    "Baga Burger - Sta Rita (Dila-Dila), Pampanga",
+    15.021705425348001,
+    120.57477519759212,
+    "Pampanga"
+);
+
+
+/* ---------------- NCR NORTH ---------------- */
+
+addBranch(
+    "Baga Burger - Caloocan City (Bagong Silang Near 7-11), NCR",
+    14.772606551725728,
+    121.05571592827513,
+    "NCR North Area"
+);
+
+addBranch(
+    "Baga Burger - Caloocan City (Phase 1 Bagong Silang), NCR",
+    14.775054942869984,
+    121.04547773381813,
+    "NCR North Area"
+);
+
+addBranch(
+    "Baga Burger - Caloocan City (Camarin Kai Mall), NCR",
+    14.75624526210564,
+    121.04640072161172,
+    "NCR North Area"
+);
+
+addBranch(
+    "Baga Burger - Caloocan City (Camarin Kiko), NCR",
+    14.756743061945572,
+    121.06151007245204,
+    "NCR North Area"
+);
+
+addBranch(
+    "Baga Burger - Caloocan City (Capitol Amparo), NCR",
+    14.750533492763877,
+    121.06773798779356,
+    "NCR North Area"
+);
+
+addBranch(
+    "Baga Burger - Caloocan City (Caybiga), NCR",
+    14.71931019300445,
+    121.00665440683044,
+    "NCR North Area"
+);
+
+addBranch(
+    "Baga Burger - Caloocan City (Deparo), NCR",
+    14.740830447907376,
+    121.02500498409825,
+    "NCR North Area"
+);
+
+addBranch(
+    "Baga Burger - Caloocan City (Hermosa Tondo), NCR",
+    14.632706598924457,
+    120.97924999333655,
+    "NCR North Area"
+);
+
+addBranch(
+    "Baga Burger - Caloocan City (Phase 1 Bagong Silang), NCR",
+    14.775054942869984,
+    121.04547773381813,
+    "NCR North Area"
+);
+
+addBranch(
+    "Baga Burger - Caloocan City (Llano), NCR",
+    14.732643853561672,
+    121.01358507799505,
+    "NCR North Area"
+);
+
+addBranch(
+    "Baga Burger - Caloocan City (Malaria), NCR",
+    14.770640973102456,
+    121.07741375754377,
+    "NCR North Area"
+);
+
+addBranch(
+    "Baga Burger - Caloocan City (Maligaya), NCR",
+    14.742300841697126,
+    121.05904226690907,
+    "NCR North Area"
+);
+
+addBranch(
+    "Baga Burger - Caloocan City (Sanana), NCR",
+    14.759072759853908,
+    121.0700360412088,
+    "NCR North Area"
+);
+
+addBranch(
+    "Baga Burger - Malabon City (Catmon), NCR",
+    14.67011954566996,
+    120.96082512827515,
+    "NCR North Area"
+);
+
+addBranch(
+    "Baga Burger - Navotas (NBBS Kaunlaran), NCR",
+    14.647087053877096,
+    120.95553999148888,
+    "NCR North Area"
+);
+
+addBranch(
+    "Baga Burger - Pasay City (Tramo), NCR",
+    14.541859633097928,
+    121.00364709148892,
+    "NCR North Area"
+);
+
+addBranch(
+    "Baga Burger - Quezon City (EDSA Cubao), NCR",
+    14.620052531016398,
+    121.05032232137613,
+    "NCR North Area"
+);
+
+addBranch(
+    "Baga Burger - Quezon City (Novaliches Sauyo), NCR",
+    14.691963137706127,
+    121.03365261606872,
+    "NCR North Area"
+);
+
+addBranch(
+    "Baga Burger - Quezon City (Novaliches Nagkaisang Nayon), NCR",
+    14.72135499023912,
+    121.02969067173836,
+    "NCR North Area - Exact Location Currently Unavailable"
+);
+
+addBranch(
+    "Baga Burger - Quezon City (Paltok Del Monte Ave), NCR",
+    14.642412656866691,
+    121.02561432273215,
+    "NCR North Area"
+);
+
+addBranch(
+    "Baga Burger - Quezon City (Pasong Putik), NCR",
+    14.738562504459294,
+    121.06056007614735,
+    "NCR North Area"
+);
+
+addBranch(
+    "Baga Burger - Quezon City (Payatas), NCR",
+    14.698248421790627,
+    121.09770093992135,
+    "NCR North Area"
+);
+
+addBranch(
+    "Baga Burger - Quezon City (Project 4), NCR",
+    14.626120832690635,
+    121.0713855031351,
+    "NCR North Area"
+);
+
+addBranch(
+    "Baga Burger - Quezon City (Santa Lucia), NCR",
+    14.706254249134576,
+    121.0540000914889,
+    "NCR North Area"
+);
+
+addBranch(
+    "Baga Burger - Taguig City (Central Signal), NCR",
+    14.50813388795243,
+    121.05460595470267,
+    "NCR North Area"
+);
+
+addBranch(
+    "Baga Burger - Taguig City (New Lower Bicutan), NCR",
+    14.505266230530747,
+    121.06607870313512,
+    "NCR North Area"
+);
+
+addBranch(
+    "Baga Burger - Taguig City (Ususan), NCR",
+    14.53194187759818,
+    121.06945638081918,
+    "NCR North Area"
+);
+
+addBranch(
+    "Baga Burger - Tondo (Gagalangin), NCR",
+    14.629033986914642,
+    120.97381814361668,
+    "NCR North Area"
+);
+
+addBranch(
+    "Baga Burger - Valenzuela City, NCR",
+    14.687754784506993,
+    121.00098287419713,
+    "NCR North Area"
+);
+
+
+/* ---------------- NCR SOUTH ---------------- */
+
+addBranch(
+    "Baga Burger - Las Piñas (CAA Road), NCR",
+    14.45858427395123,
+    120.99551723747543,
+    "NCR South Area"
+);
+
+addBranch(
+    "Baga Burger - Las Piñas (Green Revolution), NCR",
+    14.460276750964088,
+    120.99753101052578,
+    "NCR South Area"
+);
+
+addBranch(
+    "Baga Burger - Las Piñas (Moonwalk Suki Market), NCR",
+    14.437087945685304,
+    121.00752421237341,
+    "NCR South Area"
+);
+
+addBranch(
+    "Baga Burger - Las Piñas (Verdant Pamplona Tres), NCR",
+    14.453358641049713,
+    120.98147177799505,
+    "NCR South Area"
+);
+
+addBranch(
+    "Baga Burger - Malabon City (Pulong Duhat), NCR",
+    14.679181908983225,
+    120.95941000950234,
+    "NCR South Area"
+);
+
+addBranch(
+    "Baga Burger - Makati City (Santilan), NCR",
+    14.554672853048249,
+    121.01393718779357,
+    "NCR South Area"
+);
+
+addBranch(
+    "Baga Burger - Muntinlupa (Alabang), NCR",
+    14.39469423644561,
+    121.04401456875672,
+    "NCR South Area"
+);
+
+addBranch(
+    "Baga Burger - Marikina (Conception), NCR",
+    14.649043862180564,
+    121.10552276684982,
+    "NCR South Area"
+);
+
+addBranch(
+    "Baga Burger - Parañaque (BF Sucat), NCR",
+    14.453620265890471,
+    121.04398902322174,
+    "NCR South Area"
+);
+
+
+/* ---------------- RIZAL ---------------- */
+
+addBranch(
+    "Baga Burger - ANTIPOLO CITY (bayan), Rizal",
+    14.587768653115543,
+    121.17540608779356,
+    "Rizal"
+);
+
+addBranch(
+    "Baga Burger - ANTIPOLO CITY (Cupang), Rizal",
+    14.63929238421521,
+    121.13148110612396,
+    "Rizal"
+);
+
+addBranch(
+    "Baga Burger - ANTIPOLO CITY (Cogeo), Rizal",
+    14.616725951684119,
+    121.17032373992137,
+    "Rizal"
+);
+
+addBranch(
+    "Baga Burger - ANTIPOLO CITY (Sumulong Highway), Rizal",
+    14.63256240329896,
+    121.11496541052574,
+    "Rizal"
+);
+
+addBranch(
+    "Baga Burger - Montalban (Geronimo Rodriguez), Rizal",
+    14.735680135185092,
+    121.14964411847663,
+    "Rizal"
+);
+
+addBranch(
+    "Baga Burger - San Mateo (Guitnang Bayan 1), Rizal",
+    14.687942897332508,
+    121.11739211847662,
+    "Rizal"
+);
+
+addBranch(
+    "Baga Burger - Taytay (Cuatro Cantos, Rizal Ave.), Rizal",
+    14.566311519745398,
+    121.13255118779357,
+    "Rizal"
+);
+
+
+/* ---------------- BATANGAS ---------------- */
+
+addBranch(
+    "Baga Burger - Kumintang (Ibaba), Batangas",
+    13.76310299748955,
+    121.05849790128747,
+    "Batangas"
+);
+
+addBranch(
+    "Baga Burger - Lipa (Sampaguita), Batangas",
+    13.908260735738939,
+    121.14601652273215,
+    "Batangas"
+);
+
+
+/* ---------------- CABUYAO ---------------- */
+
+addBranch(
+    "Baga Burger - Baclaran, Cabuyao",
+    14.243496684852413,
+    121.17116231662897,
+    "Cabuyao"
+);
+
+
+/* ---------------- CAVITE ---------------- */
+
+addBranch(
+    "Baga Burger - Bacoor (Mabolo 3), Cavite City",
+    14.480236722370664,
+    120.97533014102665,
+    "Cavite"
+);
+
+addBranch(
+    "Baga Burger - Bacoor (Molino 4), Cavite City",
+    14.385684007277431,
+    120.97732232827515,
+    "Cavite"
+);
+
+addBranch(
+    "Baga Burger - Dasmariñas (San Manuel 2), Cavite City",
+    14.335180419172932,
+    120.95417296634884,
+    "Cavite"
+);
+
+addBranch(
+    "Baga Burger - General Trias (Pasong Camachile I), Cavite City",
+    14.368973267746785,
+    120.89173343751345,
+    "Cavite"
+);
+
+addBranch(
+    "Baga Burger - Imus (Carsadang Bago), Cavite City",
+    14.42080144827405,
+    120.92403342182634,
+    "Cavite"
+);
+
+addBranch(
+    "Baga Burger - Imus (Malagasang - Greengate Homes), Cavite City",
+    14.374653997811896,
+    120.92560713381812,
+    "Cavite"
+);
+
+addBranch(
+    "Baga Burger - Imus (Pasong Buaya), Cavite City",
+    14.392339793750098,
+    120.96821959148889,
+    "Cavite"
+);
+
+addBranch(
+    "Baga Burger - Naic (Arenas St.), Cavite City",
+    14.317031919098795,
+    120.76711725526289,
+    "Cavite"
+);
+
+addBranch(
+    "Baga Burger - Silang (Bulihan), Cavite City",
+    14.276052029442,
+    120.99643888594588,
+    "Cavite"
+);
+
+addBranch(
+    "Baga Burger - Tanza (Bagtas), Cavite City",
+    14.334643345494976,
+    120.85463289943978,
+    "Cavite"
+);
+
+addBranch(
+    "Baga Burger - CAVITE, Tanza (Paradahan), Cavite City",
+    14.32108336577513,
+    120.86278826634886,
+    "Cavite"
+);
+
+addBranch(
+    "Baga Burger - CAVITE, Trece Martires (Golden Horizon), Cavite City",
+    14.30001440852807,
+    120.89038826132733,
+    "Cavite"
+);
+
+addBranch(
+    "Baga Burger - CAVITE, Trece Martires (Hugo Perez), Cavite City",
+    14.282925513438116,
+    120.88958424409343,
+    "Cavite"
+);
+
+addBranch(
+    "Baga Burger - CAVITE, Trece Martires (Luciano - Indang Road), Cavite City",
+    14.275666264311614,
+    120.87196049333656,
+    "Cavite"
+);
+
+
+/* ---------------- LAGUNA ---------------- */
+
+addBranch(
+    "Baga Burger - LAGUNA, Biñan (Centro Mall), Laguna",
+    14.332904979977974,
+    121.08102603484414,
+    "Laguna"
+);
+
+addBranch(
+    "Baga Burger - LAGUNA, Biñan (San Antonio - Bonifacio St.), Laguna",
+    14.339287000019608,
+    121.08670155711054,
+    "Laguna"
+);
+
+addBranch(
+    "Baga Burger - Cabuyao (Banay-Banay), Laguna",
+    14.262876476606884,
+    121.14562778353803,
+    "Laguna"
+);
+
+addBranch(
+    "Baga Burger - Cabuyao (Pulo), Laguna",
+    14.25839716591024,
+    121.12793764249622,
+    "Laguna"
+);
+
+addBranch(
+    "Baga Burger - Cabuyao (San Isidro), Laguna",
+    14.239437905225662,
+    121.13459992753724,
+    "Laguna"
+);
+
+addBranch(
+    "Baga Burger - Cabuyao (Uno), Laguna",
+    14.281978497588913,
+    121.13197758015527,
+    "Laguna"
+);
+
+addBranch(
+    "Baga Burger - Calamba (Canlubag), Laguna",
+    14.215090525376624,
+    121.12222216197479,
+    "Laguna"
+);
+
+addBranch(
+    "Baga Burger - Calamba (Crossing), Laguna",
+    14.205761764027516,
+    121.16066716393026,
+    "Laguna"
+);
+
+addBranch(
+    "Baga Burger - Calamba (Mamatid), Laguna",
+    14.240965785802908,
+    121.15187617799504,
+    "Laguna"
+);
+
+addBranch(
+    "Baga Burger - Calamba (Mayapa), Laguna",
+    14.210686813643655,
+    121.12394536450118,
+    "Laguna"
+);
+
+addBranch(
+    "Baga Burger - Calamba (Mercado), Laguna",
+    14.214347255243668,
+    121.16776903672701,
+    "Laguna"
+);
+
+addBranch(
+    "Baga Burger - Calamba (Palo Alto), Laguna",
+    14.186245728974578,
+    121.11129436000937,
+    "Laguna"
+);
+
+addBranch(
+    "Baga Burger - San Pedro, Laguna",
+    14.352940124509258,
+    121.06769334546436,
+    "Laguna"
+);
+
+addBranch(
+    "Baga Burger - San Pedro (Langgam), Laguna",
+    14.326484717409631,
+    121.0158294209678,
+    "Laguna"
+);
+
+
+/* ============================================================
+   LOAD REMOTE BRANCH DATA + AUTH
+============================================================ */
+
+loadBranchEdits();
+initAuth();
+loadBranchesFromSupabase();
+
+
+/* ============================================================
+   12. DRAWING LAYER
+============================================================ */
+
+var drawnItems =
+    new L.FeatureGroup();
+
+map.addLayer(
+    drawnItems
+);
+
+
+/* ============================================================
+   13. DRAWING TOOL
+============================================================ */
+
+var drawControl =
+    new L.Control.Draw({
+
+        position: 'topright',
+
+        draw: {
+
+            polyline: {
+
+                shapeOptions: {
+                    weight: 4
+                }
+
+            },
+
+            polygon: false,
+
+            circle: {
+
+                shapeOptions: {
+                    fillOpacity: 0.15
+                }
+
+            },
+
+            rectangle: {
+
+                shapeOptions: {
+                    fillOpacity: 0.15
+                }
+
+            },
+
+            marker: false,
+
+            circlemarker: false
+
+        },
+
+        edit: {
+
+            featureGroup: drawnItems,
+
+            remove: true
+
+        }
+
+    });
+
+
+map.addControl(
+    drawControl
+);
+
+
+/* ============================================================
+   14. DRAW CREATED
+============================================================ */
+
+map.on(
+    L.Draw.Event.CREATED,
+    function(event) {
+
+        var layer =
+            event.layer;
+
+
+        drawnItems.addLayer(
+            layer
+        );
+
+
+        if (
+            layer instanceof L.Polyline &&
+            !(layer instanceof L.Polygon)
+        ) {
+
+            var latlngs =
+                layer.getLatLngs();
+
+
+            var totalDistance =
+                0;
+
+
+            for (
+                var i = 1;
+                i < latlngs.length;
+                i++
+            ) {
+
+                totalDistance +=
+                    latlngs[i - 1]
+                    .distanceTo(
+                        latlngs[i]
+                    );
+
+            }
+
+
+            var km =
+                (
+                    totalDistance / 1000
+                ).toFixed(2);
+
+
+            layer.bindPopup(
+                '<b>Route / Distance</b><br>' +
+                'Distance: ' +
+                km +
+                ' km'
+            );
+
+        }
+
+
+        else if (
+            layer instanceof L.Circle
+        ) {
+
+            var radius =
+                layer.getRadius();
+
+
+            var radiusKm =
+                (
+                    radius / 1000
+                ).toFixed(2);
+
+
+            layer.bindPopup(
+                '<b>Coverage Circle</b><br>' +
+                'Radius: ' +
+                radiusKm +
+                ' km'
+            );
+
+        }
+
+
+        else if (
+            layer instanceof L.Rectangle
+        ) {
+
+            layer.bindPopup(
+                '<b>Vlogger Territory</b><br>' +
+                'You can edit or resize this area.'
+            );
+
+        }
+
+    }
+);
+
+
+/* ============================================================
+   15. COMMENT SYSTEM
+============================================================ */
+
+var commentItems =
+    new L.FeatureGroup();
+
+map.addLayer(
+    commentItems
+);
+
+var commentMode = false;
+
+var commentLat = null;
+
+var commentLng = null;
+
+var currentCommentMarker = null;
+
+
+/* ============================================================
+   16. COMMENT ICON
+============================================================ */
+
+function createCommentIcon(text) {
+
+    return L.divIcon({
+
+        className: '',
+
+        html:
+            '<div class="map-comment">' +
+
+            escapePopupText(text)
+                .replace(/\n/g, '<br>') +
+
+            '</div>',
+
+        iconSize: null,
+
+        iconAnchor: [0, 0]
+
+    });
+
+}
+
+
+/* ============================================================
+   17. ACTIVATE COMMENT MODE
+============================================================ */
+
+function activateCommentMode() {
+
+    commentMode = true;
+
+
+    var button =
+        document.getElementById(
+            'commentButton'
+        );
+
+
+    button.classList.add(
+        'active'
+    );
+
+
+    button.innerHTML =
+        '📝 Click Map to Add Comment';
+
+}
+
+
+/* ============================================================
+   18. CLICK MAP
+============================================================ */
+
+map.on(
+    'click',
+    function(e) {
+
+        if (!commentMode) {
+            return;
+        }
+
+
+        commentMode = false;
+
+
+        var button =
+            document.getElementById(
+                'commentButton'
+            );
+
+
+        button.classList.remove(
+            'active'
+        );
+
+
+        button.innerHTML =
+            '📝 Add Comment';
+
+
+        commentLat =
+            e.latlng.lat;
+
+
+        commentLng =
+            e.latlng.lng;
+
+
+        var popupContent =
+
+            '<b>Add Map Comment</b>' +
+
+            '<br><br>' +
+
+            '<textarea ' +
+                'id="mapCommentText" ' +
+                'class="comment-input" ' +
+                'rows="4" ' +
+                'placeholder="Example: Vlogger 1 Territory">' +
+            '</textarea>' +
+
+            '<br>' +
+
+            '<button ' +
+                'class="comment-button" ' +
+                'onclick="saveMapComment()">' +
+
+                'Add Comment' +
+
+            '</button>';
+
+
+        L.popup()
+
+            .setLatLng(
+                e.latlng
+            )
+
+            .setContent(
+                popupContent
+            )
+
+            .openOn(map);
+
+    }
+);
+
+
+/* ============================================================
+   19. SAVE COMMENT
+============================================================ */
+
+function saveMapComment() {
+
+    var input =
+        document.getElementById(
+            'mapCommentText'
+        );
+
+
+    if (!input) {
+        return;
+    }
+
+
+    var text =
+        input.value.trim();
+
+
+    if (text === '') {
+
+        alert(
+            'Please enter a comment.'
+        );
+
+        return;
+
+    }
+
+
+    var marker =
+        L.marker(
+
+            [
+                commentLat,
+                commentLng
+            ],
+
+            {
+                icon:
+                    createCommentIcon(
+                        text
+                    ),
+
+                draggable: true
+            }
+
+        );
+
+
+    commentItems.addLayer(
+        marker
+    );
+
+
+    marker._commentText =
+        text;
+
+
+    marker.bindPopup(
+
+        '<b>Edit Comment</b>' +
+
+        '<br><br>' +
+
+        '<textarea ' +
+            'id="editCommentText" ' +
+            'class="comment-input" ' +
+            'rows="4">' +
+
+            escapePopupText(text) +
+
+        '</textarea>' +
+
+        '<br>' +
+
+        '<button ' +
+            'class="comment-button" ' +
+            'onclick="editMapComment()">' +
+
+            'Save Changes' +
+
+        '</button>' +
+
+        '<br><br>' +
+
+        '<button ' +
+            'class="comment-button" ' +
+            'onclick="deleteMapComment()">' +
+
+            '🗑️ Delete Comment' +
+
+        '</button>'
+
+    );
+
+
+    marker.on(
+        'click',
+        function() {
+
+            currentCommentMarker =
+                marker;
+
+        }
+    );
+
+
+    currentCommentMarker =
+        marker;
+
+
+    map.closePopup();
+
+}
+
+
+/* ============================================================
+   20. EDIT COMMENT
+============================================================ */
+
+function editMapComment() {
+
+    if (!requireEditor()) return;
+
+    var marker =
+        currentCommentMarker;
+
+
+    if (!marker) {
+        return;
+    }
+
+
+    var input =
+        document.getElementById(
+            'editCommentText'
+        );
+
+
+    if (!input) {
+        return;
+    }
+
+
+    var newText =
+        input.value.trim();
+
+
+    if (newText === '') {
+
+        alert(
+            'Comment cannot be empty.'
+        );
+
+        return;
+
+    }
+
+
+    marker._commentText =
+        newText;
+
+
+    marker.setIcon(
+        createCommentIcon(
+            newText
+        )
+    );
+
+
+    marker.closePopup();
+
+}
+
+
+/* ============================================================
+   21. DELETE COMMENT
+============================================================ */
+
+function deleteMapComment() {
+
+    if (!requireEditor()) return;
+
+    var marker =
+        currentCommentMarker;
+
+
+    if (!marker) {
+        return;
+    }
+
+
+    commentItems.removeLayer(
+        marker
+    );
+
+
+    currentCommentMarker =
+        null;
+
+}
+
+
+/* ============================================================
+   22. SEARCH BRANCH
+============================================================ */
+
+function searchBranch() {
+
+    var query =
+        document
+            .getElementById(
+                'searchBox'
+            )
+            .value
+            .toLowerCase()
+            .trim();
+
+
+    var resultsBox =
+        document.getElementById(
+            'searchResults'
+        );
+
+
+    resultsBox.innerHTML =
+        '';
+
+
+    if (query === '') {
+
+        resultsBox.style.display =
+            'none';
+
+        return;
+
+    }
+
+
+    var results =
+        branches.filter(
+            function(branch) {
+
+                return (
+
+                    branch.name
+                        .toLowerCase()
+                        .includes(query)
+
+                    ||
+
+                    String(
+                        branch.area || ''
+                    )
+                    .toLowerCase()
+                    .includes(query)
+
+                    ||
+
+                    String(
+                        branch.address || ''
+                    )
+                    .toLowerCase()
+                    .includes(query)
+
+                );
+
+            }
+        );
+
+
+    if (results.length === 0) {
+
+        resultsBox.innerHTML =
+            '<div class="search-result">' +
+                'No branch found.' +
+            '</div>';
+
+        resultsBox.style.display =
+            'block';
+
+        return;
+
+    }
+
+
+    results.forEach(
+        function(branch) {
+
+            var div =
+                document.createElement(
+                    'div'
+                );
+
+
+            div.className =
+                'search-result';
+
+
+            div.innerHTML =
+
+                '<b>' +
+                    escapePopupText(
+                        branch.name
+                    ) +
+                '</b>' +
+
+                '<br>' +
+
+                escapePopupText(
+                    branch.area
+                );
+
+
+            div.onclick =
+                function() {
+
+                    map.setView(
+
+                        [
+                            branch.lat,
+                            branch.lng
+                        ],
+
+                        16
+
+                    );
+
+
+                    branch.marker.openPopup();
+
+
+                    openBranchInfo(
+                        branch
+                    );
+
+
+                    resultsBox.style.display =
+                        'none';
+
+                };
+
+
+            resultsBox.appendChild(
+                div
+            );
+
+        }
+    );
+
+
+    resultsBox.style.display =
+        'block';
+
+}
+
+
+/* ============================================================
+   23. SEARCH WHILE TYPING
+============================================================ */
+
+document
+    .getElementById(
+        'searchBox'
+    )
+    .addEventListener(
+        'input',
+        function() {
+
+            searchBranch();
+
+        }
+    );
+
+
+/* ============================================================
+   ENTER TO SEARCH
+============================================================ */
+
+document
+    .getElementById(
+        'searchBox'
+    )
+    .addEventListener(
+        'keydown',
+        function(event) {
+
+            if (
+                event.key === 'Enter'
+            ) {
+
+                searchBranch();
+
+            }
+
+        }
+    );
+
+
+/* ============================================================
+   CLICK OUTSIDE SEARCH RESULTS
+============================================================ */
+
+document.addEventListener(
+    'click',
+    function(event) {
+
+        var resultsBox =
+            document.getElementById(
+                'searchResults'
+            );
+
+        var searchBox =
+            document.getElementById(
+                'searchBox'
+            );
+
+        if (
+            event.target !== searchBox &&
+            !resultsBox.contains(
+                event.target
+            )
+        ) {
+
+            resultsBox.style.display =
+                'none';
+
+        }
+
+    }
+);
+
+
+/* ============================================================
+   24. FIT MAP TO ALL BRANCHES
+============================================================ */
+
+if (branches.length > 0) {
+
+    var branchMarkers = [];
+
+
+    branches.forEach(
+        function(branch) {
+
+            if (branch.marker) {
+
+                branchMarkers.push(
+                    branch.marker
+                );
+
+            }
+
+        }
+    );
+
+
+    if (branchMarkers.length > 0) {
+
+        var group =
+            L.featureGroup(
+                branchMarkers
+            );
+
+
+        map.fitBounds(
+            group
+                .getBounds()
+                .pad(0.10)
+        );
+
+    }
+
+}
+
+
+/* ============================================================
+   25. CREATOR NOTES
+============================================================ */
+
+var creatorNotes = {
+
+    North: [],
+
+    NCR: [],
+
+    South: []
+
+};
+
+
+var creatorNotesStorageKey =
+    'bagaBurgerCreatorNotesByArea';
+
+
+function loadCreatorNotes() {
+
+    try {
+
+        var saved =
+            localStorage.getItem(
+                creatorNotesStorageKey
+            );
+
+
+        if (saved) {
+
+            var parsed =
+                JSON.parse(saved);
+
+
+            if (
+                parsed &&
+                !Array.isArray(parsed)
+            ) {
+
+                creatorNotes.North =
+                    Array.isArray(
+                        parsed.North
+                    )
+                    ?
+                    parsed.North
+                    :
+                    [];
+
+
+                creatorNotes.NCR =
+                    Array.isArray(
+                        parsed.NCR
+                    )
+                    ?
+                    parsed.NCR
+                    :
+                    [];
+
+
+                creatorNotes.South =
+                    Array.isArray(
+                        parsed.South
+                    )
+                    ?
+                    parsed.South
+                    :
+                    [];
+
+            }
+
+        }
+
+    } catch (error) {
+
+        console.warn(
+            'Creator notes could not be loaded.',
+            error
+        );
+
+    }
+
+
+    renderCreatorNotes();
+
+}
+
+
+/* ============================================================
+   SAVE CREATOR NOTES
+============================================================ */
+
+function saveCreatorNotes() {
+
+    try {
+
+        localStorage.setItem(
+
+            creatorNotesStorageKey,
+
+            JSON.stringify(
+                creatorNotes
+            )
+
+        );
+
+    } catch (error) {
+
+        console.warn(
+            'Creator notes could not be saved.',
+            error
+        );
+
+    }
+
+}
+
+
+/* ============================================================
+   ESCAPE CREATOR TEXT
+============================================================ */
+
+function escapeCreatorNoteText(text) {
+
+    return String(
+        text || ''
+    )
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+
+}
+
+
+/* ============================================================
+   ADD CREATOR NOTE
+============================================================ */
+
+function addCreatorNote(area) {
+
+    if (!requireEditor()) return;
+
+    var nameInput =
+        document.getElementById(
+            'creatorName' + area
+        );
+
+
+    var noteInput =
+        document.getElementById(
+            'creatorNote' + area
+        );
+
+
+    if (
+        !nameInput ||
+        !noteInput
+    ) {
+
+        return;
+
+    }
+
+
+    var name =
+        nameInput.value.trim();
+
+
+    var note =
+        noteInput.value.trim();
+
+
+    if (!name) {
+
+        nameInput.focus();
+
+
+        alert(
+            'Please enter the vlogger / content creator name.'
+        );
+
+
+        return;
+
+    }
+
+
+    creatorNotes[area].unshift({
+
+        id:
+            Date.now() +
+            Math.random(),
+
+        name:
+            name,
+
+        note:
+            note
+
+    });
+
+
+    saveCreatorNotes();
+
+
+    renderCreatorNotes();
+
+
+    nameInput.value =
+        '';
+
+    noteInput.value =
+        '';
+
+    nameInput.focus();
+
+}
+
+
+/* ============================================================
+   EDIT CREATOR NOTE
+============================================================ */
+
+function editCreatorNote(
+    area,
+    id
+) {
+
+    var item =
+        creatorNotes[area].find(
+            function(note) {
+
+                return note.id === id;
+
+            }
+        );
+
+
+    if (!item) {
+        return;
+    }
+
+
+    var name =
+        prompt(
+            'Creator / Vlogger name:',
+            item.name
+        );
+
+
+    if (name === null) {
+        return;
+    }
+
+
+    var note =
+        prompt(
+            'Note:',
+            item.note || ''
+        );
+
+
+    if (note === null) {
+        return;
+    }
+
+
+    if (!name.trim()) {
+
+        alert(
+            'Creator name cannot be empty.'
+        );
+
+        return;
+
+    }
+
+
+    item.name =
+        name.trim();
+
+
+    item.note =
+        note.trim();
+
+
+    saveCreatorNotes();
+
+
+    renderCreatorNotes();
+
+}
+
+
+/* ============================================================
+   DELETE CREATOR NOTE
+============================================================ */
+
+function deleteCreatorNote(
+    area,
+    id
+) {
+
+    creatorNotes[area] =
+        creatorNotes[area].filter(
+            function(item) {
+
+                return item.id !== id;
+
+            }
+        );
+
+
+    saveCreatorNotes();
+
+
+    renderCreatorNotes();
+
+}
+
+
+/* ============================================================
+   RENDER CREATOR NOTES
+============================================================ */
+
+function renderCreatorNotes() {
+
+    var areas = [
+        'North',
+        'NCR',
+        'South'
+    ];
+
+
+    areas.forEach(
+        function(area) {
+
+            var list =
+                document.getElementById(
+                    'creatorList' + area
+                );
+
+
+            if (!list) {
+                return;
+            }
+
+
+            var notes =
+                creatorNotes[area] || [];
+
+
+            if (!notes.length) {
+
+                list.innerHTML =
+
+                    '<div class="creator-notes-empty">' +
+
+                        'No notes yet for this area.' +
+
+                    '</div>';
+
+
+                return;
+
+            }
+
+
+            list.innerHTML =
+                notes.map(
+                    function(item) {
+
+                        var safeName =
+                            escapeCreatorNoteText(
+                                item.name
+                            );
+
+
+                        var safeNote =
+                            escapeCreatorNoteText(
+                                item.note
+                            );
+
+
+                        return (
+
+                            '<div class="creator-note-card">' +
+
+                                '<button ' +
+                                    'class="edit-creator-note" ' +
+                                    'title="Edit note" ' +
+                                    'onclick="editCreatorNote(\'' +
+                                        area +
+                                    '\',' +
+                                        item.id +
+                                    ')">' +
+
+                                    '✏️' +
+
+                                '</button>' +
+
+
+                                '<button ' +
+                                    'class="delete-creator-note" ' +
+                                    'title="Delete note" ' +
+                                    'onclick="deleteCreatorNote(\'' +
+                                        area +
+                                    '\',' +
+                                        item.id +
+                                    ')">' +
+
+                                    '×' +
+
+                                '</button>' +
+
+
+                                '<div class="creator-note-name">' +
+
+                                    safeName +
+
+                                '</div>' +
+
+
+                                (
+                                    safeNote
+
+                                    ?
+
+                                    '<div class="creator-note-text">' +
+
+                                        safeNote +
+
+                                    '</div>'
+
+                                    :
+
+                                    ''
+
+                                ) +
+
+                            '</div>'
+
+                        );
+
+                    }
+                )
+                .join('');
+
+        }
+    );
+
+}
+
+
+/* ============================================================
+   TOGGLE CREATOR AREA
+============================================================ */
+
+function toggleCreatorArea(area) {
+
+    var section =
+        document.getElementById(
+            'creatorArea' + area
+        );
+
+
+    if (!section) {
+        return;
+    }
+
+
+    section.classList.toggle(
+        'collapsed'
+    );
+
+}
+
+
+/* ============================================================
+   TOGGLE CREATOR PANEL
+============================================================ */
+
+function toggleCreatorNotes() {
+
+    var panel =
+        document.getElementById(
+            'creatorNotesPanel'
+        );
+
+
+    var tab =
+        document.getElementById(
+            'creatorNotesTab'
+        );
+
+
+    if (!panel) {
+        return;
+    }
+
+
+    panel.classList.toggle(
+        'collapsed'
+    );
+
+
+    if (
+        panel.classList.contains(
+            'collapsed'
+        )
+    ) {
+
+        tab.textContent =
+            '🎥 Notes';
+
+
+        tab.title =
+            'Open creator notes';
+
+    }
+
+    else {
+
+        tab.textContent =
+            '🎥 Creator Notes';
+
+
+        tab.title =
+            'Collapse creator notes';
+
+    }
+
+
+    setTimeout(
+        function() {
+
+            if (
+                typeof map !==
+                'undefined'
+            ) {
+
+                map.invalidateSize();
+
+            }
+
+        },
+
+        280
+    );
+
+}
+
+
+/* ============================================================
+   ENTER KEY FOR CREATOR NOTES
+============================================================ */
+
+[
+    'North',
+    'NCR',
+    'South'
+].forEach(
+    function(area) {
+
+        var input =
+            document.getElementById(
+                'creatorName' + area
+            );
+
+
+        if (input) {
+
+            input.addEventListener(
+                'keydown',
+                function(event) {
+
+                    if (
+                        event.key ===
+                        'Enter'
+                    ) {
+
+                        event.preventDefault();
+
+                        addCreatorNote(
+                            area
+                        );
+
+                    }
+
+                }
+            );
+
+        }
+
+    }
+);
+
+
+/* ============================================================
+   LOAD CREATOR NOTES
+============================================================ */
+
+loadCreatorNotes();
+
+
+/* ============================================================
+   FINAL MAP REFRESH
+============================================================ */
+
+setTimeout(
+    function() {
+
+        map.invalidateSize();
+
+    },
+    500
+);
+
+</script>
+
+</body>
+
+</html>
