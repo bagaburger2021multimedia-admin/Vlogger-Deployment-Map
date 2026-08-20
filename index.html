@@ -4145,7 +4145,30 @@ async function loadCreatorNotes() {
         }
 
 
-        creatorNotes = data || [];
+       creatorNotes = {
+    North: [],
+    NCR: [],
+    South: []
+};
+
+
+data.forEach(item => {
+
+    if(creatorNotes[item.area]){
+
+        creatorNotes[item.area].push({
+
+            id:item.id,
+
+            name:item.creator_name,
+
+            note:item.note
+
+        });
+
+    }
+
+});
 
 
         renderCreatorNotes();
@@ -4224,23 +4247,25 @@ async function loadCreatorNotes() {
    SAVE CREATOR NOTES
 ============================================================ */
 
-async function saveCreatorNotes() {
+async function saveCreatorNotes(area, creatorData) {
 
-    try {
+    const { error } = await db
+        .from("creator_notes")
+        .insert({
+            area: area,
+            creator_name: creatorData.name,
+            note: creatorData.note
+        });
 
-        const { error } = await db
-            .from("creator_notes")
-            .upsert(creatorNotes);
 
+    if (error) {
+        console.error(
+            "Supabase save error:",
+            error
+        );
+    }
 
-        if (error) {
-
-            console.warn(
-                "Creator notes could not be saved to Supabase.",
-                error
-            );
-
-        }
+}    
 
     } catch (error) {
 
@@ -4324,22 +4349,26 @@ function addCreatorNote(area) {
     }
 
 
-    creatorNotes[area].unshift({
+    var newCreatorNote = {
 
-        id:
-            Date.now() +
-            Math.random(),
+    id: Date.now() + Math.random(),
 
-        name:
-            name,
+    name:name,
 
-        note:
-            note
+    note:note
 
-    });
+};
 
 
-    saveCreatorNotes();
+creatorNotes[area].unshift(
+    newCreatorNote
+);
+
+
+saveCreatorNotes(
+    area,
+    newCreatorNote
+);
 
 
     renderCreatorNotes();
