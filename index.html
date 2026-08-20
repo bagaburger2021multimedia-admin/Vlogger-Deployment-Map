@@ -911,7 +911,12 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <script>
+    const { createClient } = supabase;
 
+const db = createClient(
+    "YOUR_SUPABASE_URL",
+    "YOUR_ANON_KEY"
+    
 /* ============================================================
    1. INITIAL MAP
 ============================================================ */
@@ -1153,7 +1158,7 @@ async function saveBranchToSupabase(branch) {
     }
 
     branchEdits[branch.originalName] = payload;
-    saveBranchEditsLocal();
+    saveBranchEdits(currentBranchId, branchEdits[currentBranchId]);
     return true;
 }
 
@@ -1488,7 +1493,7 @@ async function saveBranchNotes(id) {
     ].notes = branch.notes;
 
 
-    saveBranchEditsLocal();
+   saveBranchEdits(currentBranchId, branchEdits[currentBranchId]);
 
     saveBranchToSupabase(branch).then(function(ok) {
         if (ok) alert('Branch notes saved to Supabase.');
@@ -2020,7 +2025,7 @@ async function editBranch(id) {
     };
 
 
-    saveBranchEditsLocal();
+    saveBranchEdits(currentBranchId, branchEdits[currentBranchId]);
 
     var saved = await saveBranchToSupabase(branch);
     if (!saved) return;
@@ -2223,7 +2228,7 @@ async function addNewBranch() {
     };
 
 
-    saveBranchEditsLocal();
+    saveBranchEdits(currentBranchId, branchEdits[currentBranchId]);
 
     var saved = await saveBranchToSupabase(branch);
     if (!saved) return;
@@ -4121,14 +4126,39 @@ var creatorNotesStorageKey =
     'bagaBurgerCreatorNotesByArea';
 
 
-function loadCreatorNotes() {
+async function loadCreatorNotes() {
 
     try {
 
-        var saved =
-            localStorage.getItem(
-                creatorNotesStorageKey
-            );
+        const { data, error } = await db
+            .from("creator_notes")
+            .select("*")
+            .order("created_at", { ascending: true });
+
+
+        if (error) {
+
+            console.error("Load creator notes error:", error);
+            creatorNotes = [];
+            return;
+
+        }
+
+
+        creatorNotes = data || [];
+
+
+        renderCreatorNotes();
+
+
+    } catch (error) {
+
+        console.error(error);
+        creatorNotes = [];
+
+    }
+
+}
 
 
         if (saved) {
@@ -4194,31 +4224,34 @@ function loadCreatorNotes() {
    SAVE CREATOR NOTES
 ============================================================ */
 
-function saveCreatorNotes() {
+async function saveCreatorNotes() {
 
     try {
 
-        localStorage.setItem(
+        const { error } = await db
+            .from("creator_notes")
+            .upsert(creatorNotes);
 
-            creatorNotesStorageKey,
 
-            JSON.stringify(
-                creatorNotes
-            )
+        if (error) {
 
-        );
+            console.warn(
+                "Creator notes could not be saved to Supabase.",
+                error
+            );
+
+        }
 
     } catch (error) {
 
         console.warn(
-            'Creator notes could not be saved.',
+            "Creator notes could not be saved.",
             error
         );
 
     }
 
 }
-
 
 /* ============================================================
    ESCAPE CREATOR TEXT
