@@ -1053,21 +1053,58 @@ async function initAuth() {
     });
 }
 
-function loadBranchEdits() {
+async function loadBranchEdits() {
+
     try {
-        var saved = localStorage.getItem(branchEditsStorageKey);
-        if (saved) branchEdits = JSON.parse(saved) || {};
-    } catch (error) {
+
+        const { data, error } = await supabase
+            .from("branch_edits")
+            .select("*");
+
+        if (error) {
+            console.error("Load branch edits error:", error);
+            branchEdits = {};
+            return;
+        }
+
         branchEdits = {};
+
+        data.forEach(item => {
+            branchEdits[item.branch_id] = item.edits;
+        });
+
+    } catch (error) {
+
+        console.error(error);
+        branchEdits = {};
+
     }
+
 }
 
-function saveBranchEditsLocal() {
+
+async function saveBranchEdits(branchId, edits) {
+
     try {
-        localStorage.setItem(branchEditsStorageKey, JSON.stringify(branchEdits));
-    } catch (error) {}
-}
 
+        const { error } = await supabase
+            .from("branch_edits")
+            .upsert({
+                branch_id: branchId,
+                edits: edits
+            });
+
+        if (error) {
+            console.error("Save branch edits error:", error);
+        }
+
+    } catch(error) {
+
+        console.error(error);
+
+    }
+
+}
 async function saveBranchToSupabase(branch) {
     if (!requireEditor()) return false;
 
