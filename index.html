@@ -4222,7 +4222,9 @@ async function loadCreatorNotes() {
    ADD CREATOR NOTE
 ============================================================ */
 
-async function addCreatorNote(area) {
+async function addCreatorNote(area) { 
+
+    console.log("🔥 ADD CREATOR NOTE FUNCTION CALLED", area);
 
     if (!requireEditor()) return;
 
@@ -4354,6 +4356,8 @@ async function editCreatorNote(
     area,
     id
 ) {
+
+    console.log("🔥 EDIT CREATOR NOTE FUNCTION CALLED", area, id);
 
     if (!requireEditor()) return;
 
