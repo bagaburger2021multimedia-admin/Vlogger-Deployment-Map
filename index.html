@@ -4111,20 +4111,36 @@ if (branches.length > 0) {
    25. CREATOR NOTES
 ============================================================ */
 
+/* ============================================================
+   CREATOR NOTES - SUPABASE
+============================================================ */
+
 var creatorNotes = {
-
     North: [],
-
     NCR: [],
-
     South: []
-
 };
 
 
-var creatorNotesStorageKey =
-    'bagaBurgerCreatorNotesByArea';
+/* ============================================================
+   ESCAPE CREATOR TEXT
+============================================================ */
 
+function escapeCreatorNoteText(text) {
+
+    return String(text || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+
+}
+
+
+/* ============================================================
+   LOAD CREATOR NOTES FROM SUPABASE
+============================================================ */
 
 async function loadCreatorNotes() {
 
@@ -4133,42 +4149,58 @@ async function loadCreatorNotes() {
         const { data, error } = await db
             .from("creator_notes")
             .select("*")
-            .order("created_at", { ascending: true });
+            .order("created_at", {
+                ascending: false
+            });
 
 
         if (error) {
 
-            console.error("Load creator notes error:", error);
-            creatorNotes = [];
-            return;
+            console.error(
+                "Load creator notes error:",
+                error
+            );
 
+            creatorNotes = {
+                North: [],
+                NCR: [],
+                South: []
+            };
+
+            renderCreatorNotes();
+
+            return;
         }
 
 
-       creatorNotes = {
-    North: [],
-    NCR: [],
-    South: []
-};
+        /* Reset local display data */
+
+        creatorNotes = {
+            North: [],
+            NCR: [],
+            South: []
+        };
 
 
-data.forEach(item => {
+        /* Put Supabase data into creatorNotes */
 
-    if(creatorNotes[item.area]){
+        (data || []).forEach(function(item) {
 
-        creatorNotes[item.area].push({
+            if (creatorNotes[item.area]) {
 
-            id:item.id,
+                creatorNotes[item.area].push({
 
-            name:item.creator_name,
+                    id: item.id,
 
-            note:item.note
+                    name: item.creator_name,
+
+                    note: item.note
+
+                });
+
+            }
 
         });
-
-    }
-
-});
 
 
         renderCreatorNotes();
@@ -4176,122 +4208,12 @@ data.forEach(item => {
 
     } catch (error) {
 
-        console.error(error);
-        creatorNotes = [];
-
-    }
-
-}
-
-
-        if (saved) {
-
-            var parsed =
-                JSON.parse(saved);
-
-
-            if (
-                parsed &&
-                !Array.isArray(parsed)
-            ) {
-
-                creatorNotes.North =
-                    Array.isArray(
-                        parsed.North
-                    )
-                    ?
-                    parsed.North
-                    :
-                    [];
-
-
-                creatorNotes.NCR =
-                    Array.isArray(
-                        parsed.NCR
-                    )
-                    ?
-                    parsed.NCR
-                    :
-                    [];
-
-
-                creatorNotes.South =
-                    Array.isArray(
-                        parsed.South
-                    )
-                    ?
-                    parsed.South
-                    :
-                    [];
-
-            }
-
-        }
-
-    } catch (error) {
-
-        console.warn(
-            'Creator notes could not be loaded.',
-            error
-        );
-
-    }
-
-
-    renderCreatorNotes();
-
-}
-
-
-/* ============================================================
-   SAVE CREATOR NOTES
-============================================================ */
-
-async function saveCreatorNotes(area, creatorData) {
-
-    const { error } = await db
-        .from("creator_notes")
-        .insert({
-            area: area,
-            creator_name: creatorData.name,
-            note: creatorData.note
-        });
-
-
-    if (error) {
         console.error(
-            "Supabase save error:",
-            error
-        );
-    }
-
-}    
-
-    } catch (error) {
-
-        console.warn(
-            "Creator notes could not be saved.",
+            "Creator notes load failed:",
             error
         );
 
     }
-
-}
-
-/* ============================================================
-   ESCAPE CREATOR TEXT
-============================================================ */
-
-function escapeCreatorNoteText(text) {
-
-    return String(
-        text || ''
-    )
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
 
 }
 
@@ -4300,9 +4222,10 @@ function escapeCreatorNoteText(text) {
    ADD CREATOR NOTE
 ============================================================ */
 
-function addCreatorNote(area) {
+async function addCreatorNote(area) {
 
     if (!requireEditor()) return;
+
 
     var nameInput =
         document.getElementById(
@@ -4338,49 +4261,87 @@ function addCreatorNote(area) {
 
         nameInput.focus();
 
-
         alert(
             'Please enter the vlogger / content creator name.'
         );
-
 
         return;
 
     }
 
 
-    var newCreatorNote = {
+    try {
 
-    id: Date.now() + Math.random(),
+        const { data, error } = await db
+            .from("creator_notes")
+            .insert({
 
-    name:name,
+                area: area,
 
-    note:note
+                creator_name: name,
 
-};
+                note: note
 
-
-creatorNotes[area].unshift(
-    newCreatorNote
-);
-
-
-saveCreatorNotes(
-    area,
-    newCreatorNote
-);
+            })
+            .select()
+            .single();
 
 
-    renderCreatorNotes();
+        if (error) {
+
+            console.error(
+                "Supabase add creator note error:",
+                error
+            );
+
+            alert(
+                "Unable to save creator note."
+            );
+
+            return;
+
+        }
 
 
-    nameInput.value =
-        '';
+        /* Add the actual Supabase record */
 
-    noteInput.value =
-        '';
+        if (data) {
 
-    nameInput.focus();
+            creatorNotes[area].unshift({
+
+                id: data.id,
+
+                name: data.creator_name,
+
+                note: data.note
+
+            });
+
+        }
+
+
+        renderCreatorNotes();
+
+
+        nameInput.value = '';
+
+        noteInput.value = '';
+
+        nameInput.focus();
+
+
+    } catch (error) {
+
+        console.error(
+            "Add creator note failed:",
+            error
+        );
+
+        alert(
+            "Unable to save creator note."
+        );
+
+    }
 
 }
 
@@ -4389,23 +4350,28 @@ saveCreatorNotes(
    EDIT CREATOR NOTE
 ============================================================ */
 
-function editCreatorNote(
+async function editCreatorNote(
     area,
     id
 ) {
+
+    if (!requireEditor()) return;
+
 
     var item =
         creatorNotes[area].find(
             function(note) {
 
-                return note.id === id;
+                return String(note.id) === String(id);
 
             }
         );
 
 
     if (!item) {
+
         return;
+
     }
 
 
@@ -4417,7 +4383,9 @@ function editCreatorNote(
 
 
     if (name === null) {
+
         return;
+
     }
 
 
@@ -4429,11 +4397,18 @@ function editCreatorNote(
 
 
     if (note === null) {
+
         return;
+
     }
 
 
-    if (!name.trim()) {
+    name = name.trim();
+
+    note = note.trim();
+
+
+    if (!name) {
 
         alert(
             'Creator name cannot be empty.'
@@ -4444,18 +4419,62 @@ function editCreatorNote(
     }
 
 
-    item.name =
-        name.trim();
+    try {
+
+        const { data, error } = await db
+            .from("creator_notes")
+            .update({
+
+                creator_name: name,
+
+                note: note
+
+            })
+            .eq("id", id)
+            .select()
+            .single();
 
 
-    item.note =
-        note.trim();
+        if (error) {
+
+            console.error(
+                "Supabase edit creator note error:",
+                error
+            );
+
+            alert(
+                "Unable to update creator note."
+            );
+
+            return;
+
+        }
 
 
-    saveCreatorNotes();
+        /* Update local display */
+
+        item.name =
+            data.creator_name;
+
+        item.note =
+            data.note;
 
 
-    renderCreatorNotes();
+        renderCreatorNotes();
+
+
+    } catch (error) {
+
+        console.error(
+            "Edit creator note failed:",
+            error
+        );
+
+        alert(
+            "Unable to update creator note."
+        );
+
+    }
 
 }
 
@@ -4464,25 +4483,78 @@ function editCreatorNote(
    DELETE CREATOR NOTE
 ============================================================ */
 
-function deleteCreatorNote(
+async function deleteCreatorNote(
     area,
     id
 ) {
 
-    creatorNotes[area] =
-        creatorNotes[area].filter(
-            function(item) {
+    if (!requireEditor()) return;
 
-                return item.id !== id;
 
-            }
+    var confirmed =
+        confirm(
+            'Delete this creator note?'
         );
 
 
-    saveCreatorNotes();
+    if (!confirmed) {
+
+        return;
+
+    }
 
 
-    renderCreatorNotes();
+    try {
+
+        const { error } = await db
+            .from("creator_notes")
+            .delete()
+            .eq("id", id);
+
+
+        if (error) {
+
+            console.error(
+                "Supabase delete creator note error:",
+                error
+            );
+
+            alert(
+                "Unable to delete creator note."
+            );
+
+            return;
+
+        }
+
+
+        /* Remove from local display */
+
+        creatorNotes[area] =
+            creatorNotes[area].filter(
+                function(item) {
+
+                    return String(item.id) !== String(id);
+
+                }
+            );
+
+
+        renderCreatorNotes();
+
+
+    } catch (error) {
+
+        console.error(
+            "Delete creator note failed:",
+            error
+        );
+
+        alert(
+            "Unable to delete creator note."
+        );
+
+    }
 
 }
 
@@ -4510,7 +4582,9 @@ function renderCreatorNotes() {
 
 
             if (!list) {
+
                 return;
+
             }
 
 
@@ -4527,7 +4601,6 @@ function renderCreatorNotes() {
                         'No notes yet for this area.' +
 
                     '</div>';
-
 
                 return;
 
@@ -4554,14 +4627,22 @@ function renderCreatorNotes() {
 
                             '<div class="creator-note-card">' +
 
+
                                 '<button ' +
+
                                     'class="edit-creator-note" ' +
+
                                     'title="Edit note" ' +
+
                                     'onclick="editCreatorNote(\'' +
+
                                         area +
-                                    '\',' +
+
+                                    '\',\'' +
+
                                         item.id +
-                                    ')">' +
+
+                                    '\')">' +
 
                                     '✏️' +
 
@@ -4569,13 +4650,20 @@ function renderCreatorNotes() {
 
 
                                 '<button ' +
+
                                     'class="delete-creator-note" ' +
+
                                     'title="Delete note" ' +
+
                                     'onclick="deleteCreatorNote(\'' +
+
                                         area +
-                                    '\',' +
+
+                                    '\',\'' +
+
                                         item.id +
-                                    ')">' +
+
+                                    '\')">' +
 
                                     '×' +
 
@@ -4590,6 +4678,7 @@ function renderCreatorNotes() {
 
 
                                 (
+
                                     safeNote
 
                                     ?
@@ -4606,6 +4695,7 @@ function renderCreatorNotes() {
 
                                 ) +
 
+
                             '</div>'
 
                         );
@@ -4618,7 +4708,6 @@ function renderCreatorNotes() {
     );
 
 }
-
 
 /* ============================================================
    TOGGLE CREATOR AREA
