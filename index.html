@@ -4222,42 +4222,32 @@ async function loadCreatorNotes() {
    ADD CREATOR NOTE
 ============================================================ */
 
-async function addCreatorNote(area) { 
-
-    console.log("🔥 ADD CREATOR NOTE FUNCTION CALLED", area);
+async function addCreatorNote(area) {
 
     if (!requireEditor()) return;
-
 
     var nameInput =
         document.getElementById(
             'creatorName' + area
         );
 
-
     var noteInput =
         document.getElementById(
             'creatorNote' + area
         );
 
-
     if (
         !nameInput ||
         !noteInput
     ) {
-
         return;
-
     }
-
 
     var name =
         nameInput.value.trim();
 
-
     var note =
         noteInput.value.trim();
-
 
     if (!name) {
 
@@ -4268,26 +4258,19 @@ async function addCreatorNote(area) {
         );
 
         return;
-
     }
-
 
     try {
 
         const { data, error } = await supabaseClient
             .from("creator_notes")
             .insert({
-
                 area: area,
-
                 creator_name: name,
-
                 note: note
-
             })
             .select()
             .single();
-
 
         if (error) {
 
@@ -4301,11 +4284,7 @@ async function addCreatorNote(area) {
             );
 
             return;
-
         }
-
-
-        /* Add the actual Supabase record */
 
         if (data) {
 
@@ -4318,19 +4297,14 @@ async function addCreatorNote(area) {
                 note: data.note
 
             });
-
         }
-
 
         renderCreatorNotes();
 
-
         nameInput.value = '';
-
         noteInput.value = '';
 
         nameInput.focus();
-
 
     } catch (error) {
 
@@ -4342,9 +4316,7 @@ async function addCreatorNote(area) {
         alert(
             "Unable to save creator note."
         );
-
     }
-
 }
 
 
