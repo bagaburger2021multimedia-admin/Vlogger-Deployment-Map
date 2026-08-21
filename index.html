@@ -4146,7 +4146,7 @@ async function loadCreatorNotes() {
 
     try {
 
-        const { data, error } = await db
+        const { data, error } = await supabaseClient
             .from("creator_notes")
             .select("*")
             .order("created_at", {
@@ -4272,7 +4272,7 @@ async function addCreatorNote(area) {
 
     try {
 
-        const { data, error } = await db
+        const { data, error } = await supabaseClient
             .from("creator_notes")
             .insert({
 
@@ -4421,7 +4421,7 @@ async function editCreatorNote(
 
     try {
 
-        const { data, error } = await db
+        const { data, error } = await supabaseClient
             .from("creator_notes")
             .update({
 
@@ -4506,7 +4506,7 @@ async function deleteCreatorNote(
 
     try {
 
-        const { error } = await db
+        const { error } = await supabaseClient
             .from("creator_notes")
             .delete()
             .eq("id", id);
